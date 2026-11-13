@@ -4,7 +4,7 @@ React + TypeScript + Vite + Tailwind v4 + Neon (Postgres, Managed Better Auth, D
 
 ## Current build
 
-- Authentication: responsive sign-in and registration, password visibility, validation and email-verification guidance.
+- Authentication: responsive email/password sign-in and registration, Google OAuth sign-in, password visibility and validation.
 - Profile: editable name, phone and language preference; account and business details; sign out.
 - Business operations: inventory, sales checkout with automatic stock deduction, customer directory and expense tracking.
 - AI assistant: Groq-powered business copilot with verified business membership and server-loaded sales, expenses, customer count and low-stock context.
@@ -19,12 +19,13 @@ React + TypeScript + Vite + Tailwind v4 + Neon (Postgres, Managed Better Auth, D
    - `neon/migrations/005_auth_schema_permissions.sql`
 3. Set `VITE_NEON_URL` to the Neon Data API base URL. Do not put a database connection string/password in browser code.
 4. Add your local and production origins to Neon Auth trusted origins and Data API CORS.
-5. In **Settings → Better Auth**, enable **Sign-up with Email** and **Verify at Sign-up**, and choose **verification links**. Verification links require a custom SMTP email provider; configure and test that provider in Neon Auth before enabling this in production. Set the Auth application name to **BiasharaPilot AI** so confirmation emails are recognizable.
-6. Keep the production Vercel domain in Neon Auth trusted domains. Test the complete signup → email link → sign-in flow with a new address.
+5. In **Settings → Better Auth → Email and password**, keep **Sign-up with Email** enabled and leave **Verify at Sign-up** disabled for now. This allows email/password registration without SMTP while email verification is deferred.
+6. To enable Google sign-in, open **Settings → Better Auth → OAuth providers** and enable Google. Neon provides shared Google credentials for development/testing. For production, create your own Google OAuth Web application in Google Cloud Console, add the exact callback URL shown by Neon (`{NEON_AUTH_BASE_URL}/callback/google`) as an Authorized redirect URI, then paste the Google Client ID and Client Secret into the Google provider settings in Neon. Add the app origin (local and deployed) to Neon Auth trusted domains. In Google OAuth branding, use **BiasharaPilot AI** as the app name. Google OAuth consent screen in Testing mode only permits listed test users.
+7. Keep the production Vercel domain in Neon Auth trusted domains and test both email/password and Google sign-in.
 
 ## Groq AI endpoint
 
-The Vercel serverless endpoint lives at `api/ai.ts` and is called by the assistant at `/api/ai` by default. It:
+The Vercel serverless endpoint lives at `api/ai.ts` and is called by the assistant at `/api/ai` by default. `vercel.json` routes client-side React paths back to `index.html`, while Vercel serves the `/api/ai` function route. The function uses a standard Request/Response handler. It:
 
 - Requires a signed-in Neon session JWT in the Bearer header.
 - Checks the requested business against `business_members` through the Neon Data API, so Neon validates the token and applies RLS before any business data is read.
@@ -47,7 +48,7 @@ After adding/changing variables, redeploy the Vercel project. Do not commit your
 
 ### Local development
 
-The standard Vite dev server does not execute Vercel functions. Install the Vercel CLI and run `vercel dev` from the project root to test both the Vite frontend and `/api/ai` locally. Add the variables above to the local ignored `.env` file.
+The standard Vite dev server does not execute Vercel functions. Install the Vercel CLI and run `vercel dev` from the project root to test both the Vite frontend and `/api/ai` locally. If the deployed AI page reports a 404, check the browser Network tab and ensure `VITE_AI_API_URL` is blank for the web app (so it uses same-origin `/api/ai`) or points to the deployed absolute endpoint for a separately hosted APK. Redeploy after changing Vite environment variables. Add the variables above to the local ignored `.env` file.
 
 ## Run the frontend only
 
