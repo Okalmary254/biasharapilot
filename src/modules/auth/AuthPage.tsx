@@ -26,7 +26,10 @@ export default function AuthPage() {
       } else {
         const { data, error: e } = await neon.auth.signUp({
           email: form.email.trim(), password: form.password,
-          options: { data: { name: form.name.trim(), displayName: form.name.trim() } },
+          options: {
+            data: { name: form.name.trim(), displayName: form.name.trim() },
+            emailRedirectTo: window.location.origin,
+          },
         });
         if (e) setError(e.message);
         else if (!data.session) {
