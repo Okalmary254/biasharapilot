@@ -5,6 +5,10 @@ import AuthPage from "../modules/auth/AuthPage";
 import Onboarding from "../modules/onboarding/Onboarding";
 import Dashboard from "../modules/dashboard/Dashboard";
 import Profile from "../modules/profile/Profile";
+import Stock from "../modules/stock/Stock";
+import Sales from "../modules/sales/Sales";
+import Customers from "../modules/customers/Customers";
+import Expenses from "../modules/expenses/Expenses";
 import Shell from "../components/layout/Shell";
 import Splash from "../components/shared/Splash";
 import ComingSoon from "../components/shared/ComingSoon";
@@ -30,8 +34,10 @@ export default function App() {
           <Route element={<Guard requireBusiness />}>
             <Route element={<Shell />}>
               <Route path="/" element={<Dashboard />} />
-              <Route path="/stock" element={<ComingSoon title="Stock" />} />
-              <Route path="/sales" element={<ComingSoon title="Sales" />} />
+              <Route path="/stock" element={<Stock />} />
+              <Route path="/sales" element={<Sales />} />
+              <Route path="/customers" element={<Customers />} />
+              <Route path="/expenses" element={<Expenses />} />
               <Route path="/ai" element={<ComingSoon title="AI Assistant" />} />
               <Route path="/profile" element={<Profile />} />
             </Route>
