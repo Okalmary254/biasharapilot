@@ -38,6 +38,7 @@ Configure these variables in **Vercel → Project → Settings → Environment V
 | `GROQ_API_KEY` | Your Groq API key (server-side secret; never use a `VITE_` prefix) |
 | `GROQ_MODEL` | Optional; defaults to `openai/gpt-oss-120b` |
 | `NEON_DATA_API_URL` | Optional; defaults to `VITE_NEON_URL` for the server function |
+| `APP_ORIGINS` | Optional comma-separated extra origins for Capacitor/WebView or a separately hosted frontend; same-origin Vercel requests are allowed automatically |
 | `VITE_AI_API_URL` | Optional; defaults to same-origin `/api/ai` |
 
 After adding/changing variables, redeploy the Vercel project. Do not commit your real `.env` file or Groq key.
@@ -57,4 +58,4 @@ The standard Vite dev server does not execute Vercel functions. Install the Verc
 npm run build && npx cap sync android && npx cap open android
 ```
 
-The Vercel API function is a web deployment backend; a Capacitor APK calling it must use the deployed absolute API URL (set `VITE_AI_API_URL` to `https://your-domain/api/ai` when building the Android app).
+The Vercel API function is a web deployment backend; a Capacitor APK calling it must use the deployed absolute API URL (set `VITE_AI_API_URL` to `https://your-domain/api/ai` when building the Android app). The endpoint handles preflight requests and allows common Capacitor origins; add any custom app origin to `APP_ORIGINS`.
