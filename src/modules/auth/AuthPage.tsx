@@ -13,6 +13,7 @@ export default function AuthPage() {
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [visible, setVisible] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [googleBusy, setGoogleBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   if (session) return <Navigate to="/" replace />;
@@ -55,6 +56,8 @@ export default function AuthPage() {
         <div className="mb-10 flex items-center gap-3 lg:hidden"><div className="grid size-10 place-items-center rounded-xl bg-midnight text-lg font-black text-gold">B</div><span className="text-lg font-bold text-midnight">Biashara<span className="text-emerald">Pilot</span> AI</span></div>
         <div className="mb-8"><p className="mb-2 text-xs font-bold uppercase tracking-[.18em] text-emerald">{mode === "login" ? "Welcome back" : "Get started"}</p><h2 className="text-3xl font-bold tracking-tight text-midnight">{mode === "login" ? "Sign in to your account" : "Create your account"}</h2><p className="mt-2 text-sm text-slate-500">{mode === "login" ? "Pick up where you left off." : "A smarter way to run your business starts here."}</p></div>
         <div className="mb-6 grid grid-cols-2 rounded-xl bg-slate-100 p-1"><button type="button" onClick={() => switchMode("login")} className={`rounded-lg py-2.5 text-sm font-semibold ${mode === "login" ? "bg-white text-midnight shadow-sm" : "text-slate-500"}`}>Sign in</button><button type="button" onClick={() => switchMode("register")} className={`rounded-lg py-2.5 text-sm font-semibold ${mode === "register" ? "bg-white text-midnight shadow-sm" : "text-slate-500"}`}>Register</button></div>
+        <button type="button" onClick={() => void signInWithGoogle()} disabled={busy || googleBusy} className="mb-5 flex w-full items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white py-3 text-sm font-semibold text-midnight shadow-sm transition hover:bg-slate-50 disabled:opacity-60"><span className="grid size-5 place-items-center rounded-full border border-slate-200 text-sm font-bold text-[#4285F4]">G</span>{googleBusy ? "Connecting to Google…" : "Continue with Google"}</button>
+        <div className="mb-5 flex items-center gap-3"><span className="h-px flex-1 bg-slate-200"/><span className="text-xs text-slate-400">or continue with email</span><span className="h-px flex-1 bg-slate-200"/></div>
         <form onSubmit={submit} className="space-y-4">
           {mode === "register" && <label className="block"><span className="mb-1.5 block text-sm font-medium text-slate-700">Full name</span><span className="relative block"><UserRound className="absolute left-3.5 top-3.5 text-slate-400" size={17}/><input className={field} autoComplete="name" placeholder="Your full name" required minLength={2} value={form.name} onChange={e => setForm({...form,name:e.target.value})}/></span></label>}
           <label className="block"><span className="mb-1.5 block text-sm font-medium text-slate-700">Email address</span><span className="relative block"><Mail className="absolute left-3.5 top-3.5 text-slate-400" size={17}/><input className={field} type="email" autoComplete="email" placeholder="you@example.com" required value={form.email} onChange={e => setForm({...form,email:e.target.value})}/></span></label>
