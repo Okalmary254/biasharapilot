@@ -61,8 +61,16 @@ export default function AIAssistant() {
       if(!token)throw new Error("Your sign-in session has expired. Please sign in again.");
       if(!businessId)throw new Error("No business is linked to your account yet.");
       const response=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${token}`},body:JSON.stringify({messages:next.slice(-12),businessId})});
-      const result=await response.json() as {reply?:string;error?:string};
-      if(!response.ok)throw new Error(result.error||"The AI service could not respond.");
+      const responseText = await response.text();
+      let result: { reply?: string; error?: string } = {};
+      try { result = JSON.parse(responseText) as { reply?: string; error?: string }; }
+      catch {
+        if (response.status === 404) {
+          throw new Error(`The AI endpoint was not found at ${endpoint}. In Vercel, confirm that api/ai.ts is deployed and clear VITE_AI_API_URL (or set it to the deployed /api/ai URL), then redeploy.`);
+        }
+        throw new Error(`The AI server returned an unexpected response (HTTP ${response.status}). Check the Vercel function logs for this deployment.`);
+      }
+      if(!response.ok)throw new Error(result.error||`The AI service could not respond (HTTP ${response.status}).`);
       if(!result.reply)throw new Error("The AI service returned an empty response.");
       setMessages([...next,{role:"assistant",content:result.reply}]);
     }catch(err){
