@@ -29,12 +29,11 @@ export default function AuthPage() {
           email: form.email.trim(), password: form.password,
           options: {
             data: { name: form.name.trim(), displayName: form.name.trim() },
-            emailRedirectTo: window.location.origin,
           },
         });
         if (e) setError(e.message);
         else if (!data.session) {
-          setNotice("Your account has been created. Check your inbox (and spam folder) for the confirmation email. Open its link to verify your address, then sign in.");
+          setNotice("Your account was created. You can now sign in with your email and password.");
           setMode("login");
           setForm(current => ({ ...current, password: "" }));
         } else setNotice("Account created successfully. Let's set up your business.");
