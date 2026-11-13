@@ -6,7 +6,7 @@ import { useAuth } from "../../app/providers/useAuth";
 
 type Message = { role: "user" | "assistant"; content: string };
 type Context = { salesTotal: number; salesCount: number; expensesTotal: number; customerCount: number; lowStock: { name: string; quantity: number; threshold: number }[] };
-const endpoint = import.meta.env.VITE_AI_API_URL as string | undefined;
+const endpoint = (import.meta.env.VITE_AI_API_URL as string | undefined)?.trim() || "/api/ai";
 const suggestions = [
   { icon: TrendingUp, label: "Review my performance", prompt: "Review my recent business performance. What is going well and what should I improve?" },
   { icon: Package, label: "Check my stock", prompt: "Analyse my stock levels and tell me what needs attention first." },
@@ -56,14 +56,13 @@ export default function AIAssistant() {
     if(!prompt||sending)return;
     const next:Message[]=[...messages,{role:"user",content:prompt}];
     setMessages(next);setInput("");setSending(true);setError("");
-    if(!endpoint){
-      setMessages([...next,{role:"assistant",content:"Your business data is connected, but conversational AI needs a secure AI service endpoint. Set VITE_AI_API_URL to your server-side endpoint. Keep your model API key on the server — never in this app."}]);
-      setSending(false);return;
-    }
     try{
-      const response=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${session?.access_token ?? ""}`},body:JSON.stringify({messages:next.slice(-12),businessContext:context})});
-      if(!response.ok)throw new Error((await response.text())||"The AI service could not respond.");
-      const result=await response.json() as {reply?:string};
+      const token=session?.access_token;
+      if(!token)throw new Error("Your sign-in session has expired. Please sign in again.");
+      if(!businessId)throw new Error("No business is linked to your account yet.");
+      const response=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${token}`},body:JSON.stringify({messages:next.slice(-12),businessId})});
+      const result=await response.json() as {reply?:string;error?:string};
+      if(!response.ok)throw new Error(result.error||"The AI service could not respond.");
       if(!result.reply)throw new Error("The AI service returned an empty response.");
       setMessages([...next,{role:"assistant",content:result.reply}]);
     }catch(err){
