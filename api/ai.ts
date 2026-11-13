@@ -19,11 +19,12 @@ async function dataRequest<T>(
   table: string,
   params: Record<string, string>,
   token: string,
+  extraHeaders: Record<string, string> = {},
 ): Promise<{ data: T; response: Response }> {
   const url = new URL(`${dataApiBase()}/${table}`);
   for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
   const response = await fetch(url, {
-    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+    headers: { Authorization: `Bearer ${token}`, Accept: "application/json", ...extraHeaders },
     cache: "no-store",
   });
   if (!response.ok) {
@@ -68,7 +69,7 @@ async function loadBusinessContext(token: string, businessId: string) {
       select: "id",
       business_id: businessFilter,
       limit: "1",
-    }, token),
+    }, token, { Prefer: "count=exact", Range: "0-0" }),
     dataRequest<ProductRow[]>("products", {
       select: "name,stock_quantity,low_stock_threshold",
       business_id: businessFilter,
