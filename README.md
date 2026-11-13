@@ -21,10 +21,10 @@ React + TypeScript + Vite + Tailwind v4 + Neon (Postgres, Managed Better Auth, D
 
 ## AI integration
 Set `VITE_AI_API_URL` to your server-side AI endpoint. The endpoint contract is:
-- Request: `POST { "messages": [{ "role": "user" | "assistant", "content": "..." }], "businessContext": { ... } }`
+- Request: `POST` with `Authorization: Bearer <Neon session access token>` and JSON `{ "messages": [{ "role": "user" | "assistant", "content": "..." }], "businessContext": { ... } }`.
 - Response: `{ "reply": "..." }`
 - Keep the model provider key on the server in a secret such as `OPENAI_API_KEY`. Never expose provider keys through `VITE_*` variables.
-- The endpoint should authenticate the caller, enforce per-user/business rate limits, validate request sizes, and treat business context as untrusted input.
+- Verify the bearer token server-side against Neon Auth; do not trust the supplied business context as proof of access. Enforce per-user/business rate limits, validate request sizes, and treat context as untrusted input.
 
 ## Run
 `npm install`
