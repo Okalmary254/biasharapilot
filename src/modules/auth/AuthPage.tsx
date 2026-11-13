@@ -44,6 +44,21 @@ export default function AuthPage() {
   };
   const switchMode = (m: "login" | "register") => { setMode(m); setError(""); setNotice(""); };
 
+  const signInWithGoogle = async () => {
+    setGoogleBusy(true); setError(""); setNotice("");
+    try {
+      const { error: oauthError } = await neon.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: window.location.origin },
+      });
+      if (oauthError) setError(oauthError.message);
+    } catch (oauthError) {
+      setError(oauthError instanceof Error ? oauthError.message : "Google sign-in could not be started. Please try again.");
+    } finally {
+      setGoogleBusy(false);
+    }
+  };
+
   return <main className="min-h-screen bg-cloud lg:grid lg:grid-cols-[1.05fr_.95fr]">
     <section className="relative hidden overflow-hidden bg-midnight p-12 text-white lg:flex lg:flex-col lg:justify-between">
       <div className="absolute -right-28 -top-28 size-96 rounded-full border border-white/10"/><div className="absolute -bottom-40 -left-20 size-[30rem] rounded-full border border-gold/20"/>
