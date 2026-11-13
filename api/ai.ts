@@ -131,10 +131,10 @@ export default {
     const requestOrigin = new URL(request.url).origin;
     const configuredOrigins = (process.env.APP_ORIGINS || DEFAULT_ALLOWED_ORIGINS.join(","))
       .split(",").map((value) => value.trim()).filter(Boolean);
+    const respond = (body: Record<string, unknown>, status = 200) => json(body, status, origin);
     if (origin && origin !== requestOrigin && !configuredOrigins.includes(origin)) {
       return respond({ error: "This app origin is not allowed to use the AI endpoint." }, 403);
     }
-    const respond = (body: Record<string, unknown>, status = 200) => json(body, status, origin);
 
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: corsHeaders(origin) });
