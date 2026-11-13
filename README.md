@@ -19,6 +19,8 @@ React + TypeScript + Vite + Tailwind v4 + Neon (Postgres, Managed Better Auth, D
    - `neon/migrations/005_auth_schema_permissions.sql`
 3. Set `VITE_NEON_URL` to the Neon Data API base URL. Do not put a database connection string/password in browser code.
 4. Add your local and production origins to Neon Auth trusted origins and Data API CORS.
+5. In **Settings → Better Auth**, enable **Sign-up with Email** and **Verify at Sign-up**, and choose **verification links**. Verification links require a custom SMTP email provider; configure and test that provider in Neon Auth before enabling this in production. Set the Auth application name to **BiasharaPilot AI** so confirmation emails are recognizable.
+6. Keep the production Vercel domain in Neon Auth trusted domains. Test the complete signup → email link → sign-in flow with a new address.
 
 ## Groq AI endpoint
 
