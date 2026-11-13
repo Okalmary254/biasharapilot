@@ -4,20 +4,27 @@ React + TypeScript + Vite + Tailwind v4 + Neon (Postgres, Managed Better Auth, D
 
 ## Current build
 
-- Stage 1 foundation: authentication, business onboarding, dashboard and profile.
-- Stage 2 business pages: inventory (add/search/archive products and low-stock indicators), sales checkout (cart, customer, discount, payment method, receipt history and automatic stock deduction), customer directory, and expense tracking.
-- AI assistant remains planned; its route currently shows a placeholder.
+- Authentication: responsive sign-in and registration, password visibility, validation and email-verification guidance.
+- Profile: editable name, phone and language preference; account and business details; sign out.
+- Business operations: inventory, sales checkout with automatic stock deduction, customer directory and expense tracking.
+- AI assistant: business metrics and low-stock context from the signed-in business, suggested prompts and chat UI. Conversational responses require a secure server-side AI endpoint.
 
 ## Neon setup
-1. In the Neon Console, open your project, enable **Auth** (Managed Better Auth) and the **Data API**.
+1. In the Neon Console, enable **Auth** (Managed Better Auth) and the **Data API**.
 2. Run these SQL migrations in order in the Neon SQL Editor:
    - `neon/migrations/001_core.sql`
    - `neon/migrations/002_onboarding.sql`
    - `neon/migrations/003_operational_write_policies.sql`
    - `neon/migrations/004_sales_workflow.sql`
-3. Copy your host and database name from **Connect** and set `.env`:
-   `VITE_NEON_URL=https://<your-host>/<database>`
-4. Allow your origins: add `http://localhost:5173` and `https://localhost` (the Android app origin) to Auth trusted origins and the Data API CORS list.
+3. Set `VITE_NEON_URL` in `.env` to the Neon Data API base URL. Never use a connection string containing a password in browser code.
+4. Add `http://localhost:5173` and your production/Android origins to Neon Auth trusted origins and Data API CORS.
+
+## AI integration
+Set `VITE_AI_API_URL` to your server-side AI endpoint. The endpoint contract is:
+- Request: `POST { "messages": [{ "role": "user" | "assistant", "content": "..." }], "businessContext": { ... } }`
+- Response: `{ "reply": "..." }`
+- Keep the model provider key on the server in a secret such as `OPENAI_API_KEY`. Never expose provider keys through `VITE_*` variables.
+- The endpoint should authenticate the caller, enforce per-user/business rate limits, validate request sizes, and treat business context as untrusted input.
 
 ## Run
 `npm install`
@@ -27,6 +34,3 @@ React + TypeScript + Vite + Tailwind v4 + Neon (Postgres, Managed Better Auth, D
 ```sh
 npm run build && npx cap sync android && npx cap open android
 ```
-
-## Security
-Only the public base URL belongs in this app. Never put a Neon connection string with a password in frontend code.
