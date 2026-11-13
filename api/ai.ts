@@ -3,11 +3,32 @@ type SaleRow = { total: number | string; status: string };
 type ExpenseRow = { amount: number | string };
 type ProductRow = { name: string; stock_quantity: number | string; low_stock_threshold: number | string };
 
-const json = (body: Record<string, unknown>, status = 200) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" },
+const DEFAULT_ALLOWED_ORIGINS = [
+  "capacitor://localhost",
+  "http://localhost",
+  "https://localhost",
+  "http://localhost:5173",
+  "http://localhost:3000",
+  "ionic://localhost",
+];
+
+function corsHeaders(origin: string | null) {
+  const headers = new Headers({
+    "Content-Type": "application/json; charset=utf-8",
+    "Cache-Control": "no-store",
+    "Vary": "Origin",
   });
+  if (origin) {
+    headers.set("Access-Control-Allow-Origin", origin);
+    headers.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+    headers.set("Access-Control-Allow-Headers", "Authorization, Content-Type");
+    headers.set("Access-Control-Max-Age", "86400");
+  }
+  return headers;
+}
+
+const json = (body: Record<string, unknown>, status = 200, origin: string | null = null) =>
+  new Response(JSON.stringify(body), { status, headers: corsHeaders(origin) });
 
 function dataApiBase() {
   const configured = process.env.NEON_DATA_API_URL || process.env.VITE_NEON_URL;
@@ -106,53 +127,65 @@ async function loadBusinessContext(token: string, businessId: string) {
 
 export default {
   async fetch(request: Request) {
+    const origin = request.headers.get("origin");
+    const requestOrigin = new URL(request.url).origin;
+    const configuredOrigins = (process.env.APP_ORIGINS || DEFAULT_ALLOWED_ORIGINS.join(","))
+      .split(",").map((value) => value.trim()).filter(Boolean);
+    if (origin && origin !== requestOrigin && !configuredOrigins.includes(origin)) {
+      return respond({ error: "This app origin is not allowed to use the AI endpoint." }, 403);
+    }
+    const respond = (body: Record<string, unknown>, status = 200) => json(body, status, origin);
+
+    if (request.method === "OPTIONS") {
+      return new Response(null, { status: 204, headers: corsHeaders(origin) });
+    }
     if (request.method !== "POST") {
-      return json({ error: "Method not allowed. Use POST." }, 405);
+      return respond({ error: "Method not allowed. Use POST." }, 405);
     }
 
     const authorization = request.headers.get("authorization") || "";
     const token = authorization.match(/^Bearer\s+(.+)$/i)?.[1];
-    if (!token) return json({ error: "Please sign in before using the AI assistant." }, 401);
+    if (!token) return respond({ error: "Please sign in before using the AI assistant." }, 401);
 
     const groqKey = process.env.GROQ_API_KEY;
-    if (!groqKey) return json({ error: "The AI service is not configured. Add GROQ_API_KEY to your server environment." }, 503);
+    if (!groqKey) return respond({ error: "The AI service is not configured. Add GROQ_API_KEY to your server environment." }, 503);
 
     let rawBody: string;
     try {
       rawBody = await request.text();
     } catch {
-      return json({ error: "Unable to read the request body." }, 400);
+      return respond({ error: "Unable to read the request body." }, 400);
     }
-    if (rawBody.length > 24_000) return json({ error: "Your message is too large. Please shorten the conversation and try again." }, 413);
+    if (rawBody.length > 24_000) return respond({ error: "Your message is too large. Please shorten the conversation and try again." }, 413);
 
     let body: { messages?: unknown; businessId?: unknown };
     try {
       body = JSON.parse(rawBody) as { messages?: unknown; businessId?: unknown };
     } catch {
-      return json({ error: "The request body must be valid JSON." }, 400);
+      return respond({ error: "The request body must be valid JSON." }, 400);
     }
 
     if (typeof body.businessId !== "string" || !/^[0-9a-f-]{36}$/i.test(body.businessId)) {
-      return json({ error: "A valid business is required. Refresh the page and try again." }, 400);
+      return respond({ error: "A valid business is required. Refresh the page and try again." }, 400);
     }
     if (!Array.isArray(body.messages) || body.messages.length === 0 || body.messages.length > 12) {
-      return json({ error: "Send between 1 and 12 chat messages." }, 400);
+      return respond({ error: "Send between 1 and 12 chat messages." }, 400);
     }
 
     const messages: ChatMessage[] = [];
     for (const item of body.messages) {
-      if (!item || typeof item !== "object") return json({ error: "A chat message is invalid." }, 400);
+      if (!item || typeof item !== "object") return respond({ error: "A chat message is invalid." }, 400);
       const candidate = item as { role?: unknown; content?: unknown };
       if ((candidate.role !== "user" && candidate.role !== "assistant") ||
           typeof candidate.content !== "string" ||
           candidate.content.trim().length === 0 ||
           candidate.content.length > 4_000) {
-        return json({ error: "Each message must have a user/assistant role and contain 1–4,000 characters." }, 400);
+        return respond({ error: "Each message must have a user/assistant role and contain 1–4,000 characters." }, 400);
       }
       messages.push({ role: candidate.role, content: candidate.content.trim() });
     }
     if (!messages.some((message) => message.role === "user")) {
-      return json({ error: "Please send a question to the assistant." }, 400);
+      return respond({ error: "Please send a question to the assistant." }, 400);
     }
 
     try {
@@ -183,31 +216,31 @@ export default {
 
       if (!groqResponse.ok) {
         if (groqResponse.status === 401 || groqResponse.status === 403) {
-          return json({ error: "Groq rejected the API key. Check GROQ_API_KEY in your hosting environment." }, 502);
+          return respond({ error: "Groq rejected the API key. Check GROQ_API_KEY in your hosting environment." }, 502);
         }
         if (groqResponse.status === 429) {
-          return json({ error: "The AI service is busy or its rate limit has been reached. Please try again shortly." }, 429);
+          return respond({ error: "The AI service is busy or its rate limit has been reached. Please try again shortly." }, 429);
         }
-        return json({ error: `Groq could not complete the request (HTTP ${groqResponse.status}). Check the configured model and Groq account limits.` }, 502);
+        return respond({ error: `Groq could not complete the request (HTTP ${groqResponse.status}). Check the configured model and Groq account limits.` }, 502);
       }
 
       const completion = await groqResponse.json() as {
         choices?: Array<{ message?: { content?: string | null } }>;
       };
       const reply = completion.choices?.[0]?.message?.content?.trim();
-      if (!reply) return json({ error: "Groq returned an empty response. Please try again." }, 502);
-      return json({ reply });
+      if (!reply) return respond({ error: "Groq returned an empty response. Please try again." }, 502);
+      return respond({ reply });
     } catch (error) {
       const message = error instanceof Error ? error.message : "";
       if (message.includes("Missing NEON_DATA_API_URL")) {
-        return json({ error: "The AI service is missing its Neon Data API URL configuration." }, 503);
+        return respond({ error: "The AI service is missing its Neon Data API URL configuration." }, 503);
       }
-      if (message.includes("access this business")) return json({ error: message }, 403);
-      if (message.includes("Neon session")) return json({ error: message }, 401);
+      if (message.includes("access this business")) return respond({ error: message }, 403);
+      if (message.includes("Neon session")) return respond({ error: message }, 401);
       if (message.includes("AbortError") || message.includes("TimeoutError")) {
-        return json({ error: "The AI request timed out. Please try again." }, 504);
+        return respond({ error: "The AI request timed out. Please try again." }, 504);
       }
-      return json({ error: message || "The AI service could not process this request." }, 502);
+      return respond({ error: message || "The AI service could not process this request." }, 502);
     }
   },
 };
