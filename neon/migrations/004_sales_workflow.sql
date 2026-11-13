@@ -19,6 +19,7 @@ declare
   v_item jsonb;
   v_product public.products%rowtype;
   v_qty numeric(14,3);
+  v_total_qty numeric(14,3);
   v_price numeric(14,2);
   v_subtotal numeric(14,2) := 0;
   v_total numeric(14,2);
@@ -27,7 +28,7 @@ begin
   if v_uid is null or not public.is_business_member(p_business_id) then
     raise exception 'Not authorised for this business';
   end if;
-  if jsonb_typeof(p_items) <> 'array' or jsonb_array_length(p_items) = 0 then
+  if coalesce(jsonb_typeof(p_items), '') <> 'array' or jsonb_array_length(p_items) = 0 then
     raise exception 'Add at least one item to the sale';
   end if;
   if coalesce(p_discount, 0) < 0 or coalesce(p_amount_paid, 0) < 0 then
@@ -50,7 +51,11 @@ begin
       and p.business_id = p_business_id and p.is_active = true
     for update;
     if not found then raise exception 'A selected product is unavailable'; end if;
-    if v_product.stock_quantity < v_qty then
+    select coalesce(sum((entry.value->>'quantity')::numeric), 0)
+      into v_total_qty
+      from jsonb_array_elements(p_items) as entry(value)
+      where entry.value->>'product_id' = v_item->>'product_id';
+    if v_product.stock_quantity < v_total_qty then
       raise exception 'Insufficient stock for % (available: %)', v_product.name, v_product.stock_quantity;
     end if;
     v_price := coalesce(nullif(v_item->>'unit_price', '')::numeric, v_product.selling_price);
