@@ -16,6 +16,7 @@ React + TypeScript + Vite + Tailwind v4 + Neon (Postgres, Managed Better Auth, D
    - `neon/migrations/002_onboarding.sql`
    - `neon/migrations/003_operational_write_policies.sql`
    - `neon/migrations/004_sales_workflow.sql`
+   - `neon/migrations/005_auth_schema_permissions.sql`
 3. Set `VITE_NEON_URL` in `.env` to the Neon Data API base URL. Never use a connection string containing a password in browser code.
 4. Add `http://localhost:5173` and your production/Android origins to Neon Auth trusted origins and Data API CORS.
 
