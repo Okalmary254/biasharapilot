@@ -15,7 +15,7 @@ const suggestions = [
 ];
 
 export default function AIAssistant() {
-  const { businessId } = useAuth();
+  const { businessId, session } = useAuth();
   const [messages,setMessages]=useState<Message[]>([{role:"assistant",content:"Hello! I'm your BiasharaPilot business assistant. I can help you understand your numbers, manage stock and find practical ways to grow. What would you like to work on?"}]);
   const [context,setContext]=useState<Context|null>(null);
   const [loading,setLoading]=useState(true); const [sending,setSending]=useState(false);
@@ -61,7 +61,7 @@ export default function AIAssistant() {
       setSending(false);return;
     }
     try{
-      const response=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:next.slice(-12),businessContext:context})});
+      const response=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${session?.access_token ?? ""}`},body:JSON.stringify({messages:next.slice(-12),businessContext:context})});
       if(!response.ok)throw new Error((await response.text())||"The AI service could not respond.");
       const result=await response.json() as {reply?:string};
       if(!result.reply)throw new Error("The AI service returned an empty response.");
