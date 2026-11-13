@@ -9,9 +9,9 @@ import Stock from "../modules/stock/Stock";
 import Sales from "../modules/sales/Sales";
 import Customers from "../modules/customers/Customers";
 import Expenses from "../modules/expenses/Expenses";
+import AIAssistant from "../modules/ai/AIAssistant";
 import Shell from "../components/layout/Shell";
 import Splash from "../components/shared/Splash";
-import ComingSoon from "../components/shared/ComingSoon";
 
 function Guard({ requireBusiness }: { requireBusiness: boolean }) {
   const { session, businessId, loading } = useAuth();
@@ -23,28 +23,22 @@ function Guard({ requireBusiness }: { requireBusiness: boolean }) {
 }
 
 export default function App() {
-  return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/auth" element={<AuthPage />} />
-          <Route element={<Guard requireBusiness={false} />}>
-            <Route path="/onboarding" element={<Onboarding />} />
-          </Route>
-          <Route element={<Guard requireBusiness />}>
-            <Route element={<Shell />}>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/stock" element={<Stock />} />
-              <Route path="/sales" element={<Sales />} />
-              <Route path="/customers" element={<Customers />} />
-              <Route path="/expenses" element={<Expenses />} />
-              <Route path="/ai" element={<ComingSoon title="AI Assistant" />} />
-              <Route path="/profile" element={<Profile />} />
-            </Route>
-          </Route>
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
-  );
+  return <AuthProvider><BrowserRouter><Routes>
+    <Route path="/auth" element={<AuthPage/>}/>
+    <Route element={<Guard requireBusiness={false}/>}>
+      <Route path="/onboarding" element={<Onboarding/>}/>
+    </Route>
+    <Route element={<Guard requireBusiness/>}>
+      <Route element={<Shell/>}>
+        <Route path="/" element={<Dashboard/>}/>
+        <Route path="/stock" element={<Stock/>}/>
+        <Route path="/sales" element={<Sales/>}/>
+        <Route path="/customers" element={<Customers/>}/>
+        <Route path="/expenses" element={<Expenses/>}/>
+        <Route path="/ai" element={<AIAssistant/>}/>
+        <Route path="/profile" element={<Profile/>}/>
+      </Route>
+    </Route>
+    <Route path="*" element={<Navigate to="/" replace/>}/>
+  </Routes></BrowserRouter></AuthProvider>;
 }
