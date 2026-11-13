@@ -125,8 +125,7 @@ async function loadBusinessContext(token: string, businessId: string) {
   };
 }
 
-export default {
-  async fetch(request: Request) {
+export default async function handler(request: Request) {
     const origin = request.headers.get("origin");
     const requestOrigin = new URL(request.url).origin;
     const configuredOrigins = (process.env.APP_ORIGINS || DEFAULT_ALLOWED_ORIGINS.join(","))
@@ -242,5 +241,4 @@ export default {
       }
       return respond({ error: message || "The AI service could not process this request." }, 502);
     }
-  },
-};
+}
