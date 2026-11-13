@@ -29,8 +29,11 @@ export default function AuthPage() {
           options: { data: { name: form.name.trim(), displayName: form.name.trim() } },
         });
         if (e) setError(e.message);
-        else if (!data.session) setNotice("Account created. Check your email for a verification link, then sign in.");
-        else setNotice("Account created successfully. Let's set up your business.");
+        else if (!data.session) {
+          setNotice("Your account has been created. Check your inbox (and spam folder) for the confirmation email. Open its link to verify your address, then sign in.");
+          setMode("login");
+          setForm(current => ({ ...current, password: "" }));
+        } else setNotice("Account created successfully. Let's set up your business.");
       }
     } catch { setError("We couldn't complete that request. Check your connection and try again."); }
     finally { setBusy(false); }
