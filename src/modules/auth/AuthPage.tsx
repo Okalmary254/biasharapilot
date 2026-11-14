@@ -7,6 +7,20 @@ import { useAuth } from "../../app/providers/useAuth";
 
 const field = "w-full rounded-xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm text-midnight outline-none placeholder:text-slate-400 focus:border-emerald focus:ring-2 focus:ring-emerald/10";
 
+function describeAuthError(error: unknown): string {
+  if (error instanceof Error) return error.name + ": " + error.message;
+  if (typeof error === "object" && error !== null) {
+    const value = error as { message?: unknown; code?: unknown; status?: unknown; statusText?: unknown };
+    return [
+      typeof value.message === "string" ? value.message : null,
+      typeof value.code === "string" ? "Code: " + value.code : null,
+      typeof value.status === "number" ? "HTTP: " + value.status : null,
+      typeof value.statusText === "string" ? value.statusText : null,
+    ].filter(Boolean).join(" | ") || JSON.stringify(error);
+  }
+  return String(error);
+}
+
 export default function AuthPage() {
   const { session, syncSession } = useAuth();
   const navigate = useNavigate();
@@ -42,7 +56,15 @@ export default function AuthPage() {
           navigate("/", { replace: true });
         }
       }
-    } catch { setError("We couldn't complete that request. Check your connection and try again."); }
+    } catch (authError) {
+      const details = describeAuthError(authError);
+      console.error("[BiasharaPilot auth] Request failed", {
+        origin: window.location.origin,
+        mode,
+        error: authError,
+      });
+      setError("Authentication failed from " + window.location.origin + ": " + details);
+    }
     finally { setBusy(false); }
   };
   const switchMode = (m: "login" | "register") => { setMode(m); setError(""); setNotice(""); };
