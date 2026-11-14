@@ -22,6 +22,7 @@ export const neon = createClient({
   dataApi: { url: dataApiUrl },
 });
 
+// Keep both the session metadata and its associated user available to the app.
 export type Session = NonNullable<
-  NonNullable<Awaited<ReturnType<typeof neon.auth.getSession>>["data"]>["session"]
+  Awaited<ReturnType<typeof neon.auth.getSession>>["data"]
 >;
