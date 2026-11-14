@@ -57,9 +57,8 @@ export default function AIAssistant() {
     const next:Message[]=[...messages,{role:"user",content:prompt}];
     setMessages(next);setInput("");setSending(true);setError("");
     try{
-      const { data: tokenData, error: tokenError } = await authClient.token();
-      const token = tokenData?.token;
-      if (tokenError || !token) throw new Error(tokenError?.message || "Your sign-in session could not provide a database access token. Please sign out and sign in again.");
+      const token = await authClient.getJWTToken();
+      if (!token) throw new Error("Your sign-in session could not provide a database access token. Please sign out and sign in again.");
       if(!businessId)throw new Error("No business is linked to your account yet.");
       const response=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${token}`},body:JSON.stringify({messages:next.slice(-12),businessId})});
       const responseText = await response.text();
