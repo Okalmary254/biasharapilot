@@ -57,7 +57,7 @@ export default function Profile() {
       setSigningOut(false);
     }
   };
-  const initials=(profile.full_name||session?.user.email||"BP").split(/[ @]/).filter((x): x is string => Boolean(x)).slice(0,2).map(x=>x[0].toUpperCase()).join("");
+  const initials=(profile.full_name||session?.user.email||"BP").split(/[ @]/).filter((x: string) => Boolean(x)).slice(0,2).map((x: string) => x[0].toUpperCase()).join("");
 
   return <main className="mx-auto max-w-2xl space-y-5 p-4 sm:p-6">
     <header><p className="text-xs font-bold uppercase tracking-wider text-emerald">Account</p><h1 className="text-2xl font-bold text-midnight">My profile</h1><p className="mt-1 text-sm text-slate-500">Manage your personal details and preferences.</p></header>
