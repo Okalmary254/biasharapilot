@@ -1,4 +1,5 @@
 import { createClient } from "@neon/neon-js";
+import { createAuthClient } from "@neon/neon-js/auth";
 
 const authUrl =
   import.meta.env.VITE_NEON_AUTH_URL || import.meta.env.VITE_NEON_URL;
@@ -17,6 +18,8 @@ if (!dataApiUrl) {
 }
 
 // Neon Auth uses Better Auth by default; database requests use the separate Data API.
+export const authClient = createAuthClient(authUrl);
+
 export const neon = createClient({
   auth: { url: authUrl },
   dataApi: { url: dataApiUrl },
