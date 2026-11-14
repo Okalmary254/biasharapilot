@@ -23,24 +23,22 @@ export default function AuthPage() {
     e.preventDefault(); setBusy(true); setError(""); setNotice("");
     try {
       if (mode === "login") {
-        const { error: e } = await neon.auth.signInWithPassword({ email: form.email.trim(), password: form.password });
+        const { error: e } = await neon.auth.signIn.email({ email: form.email.trim(), password: form.password });
         if (e) setError(e.message);
         else if (await syncSession()) navigate("/", { replace: true });
       } else {
-        const { data, error: e } = await neon.auth.signUp({
-          email: form.email.trim(), password: form.password,
-          options: {
-            data: { name: form.name.trim(), displayName: form.name.trim() },
-          },
+        const { data, error: e } = await neon.auth.signUp.email({
+          name: form.name.trim(),
+          email: form.email.trim(),
+          password: form.password,
         });
         if (e) setError(e.message);
-        else if (!data.session) {
+        else if (!(await syncSession())) {
           setNotice("Your account was created. You can now sign in with your email and password.");
           setMode("login");
           setForm(current => ({ ...current, password: "" }));
         } else {
           setNotice("Account created successfully. Redirecting…");
-          await syncSession();
           navigate("/", { replace: true });
         }
       }
@@ -52,9 +50,9 @@ export default function AuthPage() {
   const signInWithGoogle = async () => {
     setGoogleBusy(true); setError(""); setNotice("");
     try {
-      const { error: oauthError } = await neon.auth.signInWithOAuth({
+      const { error: oauthError } = await neon.auth.signIn.social({
         provider: "google",
-        options: { redirectTo: window.location.origin },
+        callbackURL: window.location.origin,
       });
       if (oauthError) setError(oauthError.message);
     } catch (oauthError) {
