@@ -32,7 +32,7 @@ export default function AuthPage() {
           email: form.email.trim(),
           password: form.password,
         });
-        if (e) setError(e.message);
+        if (e) setError(e.message ?? "Authentication request failed.");
         else if (!(await syncSession())) {
           setNotice("Your account was created. You can now sign in with your email and password.");
           setMode("login");
