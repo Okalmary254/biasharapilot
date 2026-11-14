@@ -25,7 +25,6 @@ function Guard({ requireBusiness }: { requireBusiness: boolean }) {
     </main>
   );
   if (requireBusiness && !businessId) return <Navigate to="/onboarding" replace />;
-  if (!requireBusiness && businessId) return <Navigate to="/" replace />;
   return <Outlet />;
 }
 
