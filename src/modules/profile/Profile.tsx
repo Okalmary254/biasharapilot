@@ -10,7 +10,7 @@ type Business = { name: string; business_type: string | null; county: string | n
 const field = "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm text-midnight outline-none focus:border-emerald focus:ring-2 focus:ring-emerald/10";
 
 export default function Profile() {
-  const { session, businessId } = useAuth();
+  const { session, businessId, clearLocalSession } = useAuth();
   const navigate = useNavigate();
   const [profile,setProfile]=useState<ProfileRecord>({full_name:"",phone:"",preferred_language:"en"});
   const [business,setBusiness]=useState<Business|null>(null);
@@ -42,8 +42,20 @@ export default function Profile() {
     setSaving(false);
   };
   const logout=async()=>{
-    setSigningOut(true);const {error:e}=await neon.auth.signOut();
-    if(e){setError(e.message);setSigningOut(false);}else navigate("/auth",{replace:true});
+    setSigningOut(true);
+    setError("");
+    try {
+      const { error: signOutError } = await neon.auth.signOut();
+      // If the server rejects an expired/invalid session, still clear the
+      // application's local authenticated state so the user is not trapped.
+      if (signOutError) console.warn("Remote sign-out failed; clearing local session.", signOutError.message);
+    } catch (signOutError) {
+      console.warn("Remote sign-out failed; clearing local session.", signOutError);
+    } finally {
+      clearLocalSession();
+      navigate("/auth", { replace: true });
+      setSigningOut(false);
+    }
   };
   const initials=(profile.full_name||session?.user.email||"BP").split(/[ @]/).filter(Boolean).slice(0,2).map(x=>x[0].toUpperCase()).join("");
 
