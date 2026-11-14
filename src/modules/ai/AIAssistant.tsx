@@ -57,7 +57,7 @@ export default function AIAssistant() {
     const next:Message[]=[...messages,{role:"user",content:prompt}];
     setMessages(next);setInput("");setSending(true);setError("");
     try{
-      const token=session?.access_token;
+      const token=session?.session?.token;
       if(!token)throw new Error("Your sign-in session has expired. Please sign in again.");
       if(!businessId)throw new Error("No business is linked to your account yet.");
       const response=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${token}`},body:JSON.stringify({messages:next.slice(-12),businessId})});
