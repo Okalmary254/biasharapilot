@@ -34,8 +34,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [businessError, setBusinessError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Treat incomplete auth responses as signed out rather than allowing
-  // downstream screens to dereference a missing user object.
   const userId = session?.user?.id ?? null;
 
   const refreshBusiness = useCallback(async () => {
@@ -72,8 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setAuthReady(true);
         return false;
       }
-      const candidate = data?.session ?? null;
-      const nextSession = candidate?.user?.id ? candidate : null;
+      const nextSession = data?.user?.id ? data : null;
       setSession(nextSession);
       setAuthReady(true);
       return Boolean(nextSession);
