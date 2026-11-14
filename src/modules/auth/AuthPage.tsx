@@ -27,7 +27,7 @@ export default function AuthPage() {
         if (e) setError(e.message);
         else if (await syncSession()) navigate("/", { replace: true });
       } else {
-        const { data, error: e } = await neon.auth.signUp.email({
+        const { error: e } = await neon.auth.signUp.email({
           name: form.name.trim(),
           email: form.email.trim(),
           password: form.password,
