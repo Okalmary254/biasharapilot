@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { FormEvent, KeyboardEvent } from "react";
 import { Bot, Send, Sparkles, TrendingUp, Package, Wallet, Users, RefreshCw } from "lucide-react";
-import { neon } from "../../services/neon/client";
+import { authClient, neon } from "../../services/neon/client";
 import { useAuth } from "../../app/providers/useAuth";
 
 type Message = { role: "user" | "assistant"; content: string };
@@ -15,7 +15,7 @@ const suggestions = [
 ];
 
 export default function AIAssistant() {
-  const { businessId, session } = useAuth();
+  const { businessId } = useAuth();
   const [messages,setMessages]=useState<Message[]>([{role:"assistant",content:"Hello! I'm your BiasharaPilot business assistant. I can help you understand your numbers, manage stock and find practical ways to grow. What would you like to work on?"}]);
   const [context,setContext]=useState<Context|null>(null);
   const [loading,setLoading]=useState(true); const [sending,setSending]=useState(false);
@@ -57,8 +57,9 @@ export default function AIAssistant() {
     const next:Message[]=[...messages,{role:"user",content:prompt}];
     setMessages(next);setInput("");setSending(true);setError("");
     try{
-      const token = await neon.auth.getJWTToken();
-      if (!token) throw new Error("Your sign-in session could not provide a database access token. Please sign out and sign in again.");
+      const { data: tokenData, error: tokenError } = await authClient.token();
+      const token = tokenData?.token;
+      if (tokenError || !token) throw new Error(tokenError?.message || "Your sign-in session could not provide a database access token. Please sign out and sign in again.");
       if(!businessId)throw new Error("No business is linked to your account yet.");
       const response=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${token}`},body:JSON.stringify({messages:next.slice(-12),businessId})});
       const responseText = await response.text();
