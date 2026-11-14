@@ -24,7 +24,7 @@ export default function AuthPage() {
     try {
       if (mode === "login") {
         const { error: e } = await neon.auth.signIn.email({ email: form.email.trim(), password: form.password });
-        if (e) setError(e.message);
+        if (e) setError(e.message ?? "Authentication request failed.");
         else if (await syncSession()) navigate("/", { replace: true });
       } else {
         const { error: e } = await neon.auth.signUp.email({
@@ -54,7 +54,7 @@ export default function AuthPage() {
         provider: "google",
         callbackURL: window.location.origin,
       });
-      if (oauthError) setError(oauthError.message);
+      if (oauthError) setError(oauthError.message ?? "Google sign-in could not be started.");
     } catch (oauthError) {
       setError(oauthError instanceof Error ? oauthError.message : "Google sign-in could not be started. Please try again.");
     } finally {
