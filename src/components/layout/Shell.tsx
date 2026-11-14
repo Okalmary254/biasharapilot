@@ -84,7 +84,7 @@ export default function Shell() {
       )}
 
       <nav aria-label="Main navigation" className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-4 border-t border-white/10 bg-midnight px-2 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] lg:hidden">
-        {tabs.filter(({ to }) => mobilePrimary.includes(to)).map(({ to, icon: Icon, label }) => (
+        {tabs.filter(({ to }) => mobilePrimary.includes(to)).map(({ to, icon: Icon }) => (
           <NavLink key={to} to={to} end={to === "/"} className={({ isActive }) =>
             `flex flex-col items-center justify-center gap-1 rounded-lg py-1.5 text-[11px] font-medium ${isActive ? "text-gold" : "text-white/65"}`
           }>
