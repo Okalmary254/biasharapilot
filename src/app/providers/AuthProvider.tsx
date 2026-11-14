@@ -66,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (error) {
         setSession(null);
         setBusinessId(null);
-        setBusinessError(error.message);
+        setBusinessError(error.message ?? "Unable to verify your sign-in session.");
         setAuthReady(true);
         return false;
       }
