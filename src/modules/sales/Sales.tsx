@@ -20,6 +20,8 @@ export default function Sales() {
   const [productId, setProductId] = useState("");
   const [quantity, setQuantity] = useState("1");
   const [customerId, setCustomerId] = useState("");
+  const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
   const [discount, setDiscount] = useState("0");
   const [amountPaid, setAmountPaid] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
@@ -67,17 +69,43 @@ export default function Sales() {
     if (!businessId || !cart.length) return;
     if (Number(discount) > subtotal) { setError("Discount cannot exceed the subtotal."); return; }
     setSaving(true); setError("");
+    let resolvedCustomerId = customerId || null;
+    const name = customerName.trim();
+    if (name) {
+      const normalizedPhone = customerPhone.trim();
+      let customerQuery = neon.from("customers").select("id").eq("business_id", businessId).eq("full_name", name);
+      if (normalizedPhone) customerQuery = customerQuery.eq("phone", normalizedPhone);
+      const { data: existingCustomer, error: lookupError } = await customerQuery.limit(1).maybeSingle();
+      if (lookupError) {
+        setError(lookupError.message);
+        setSaving(false);
+        return;
+      }
+      if (existingCustomer?.id) {
+        resolvedCustomerId = existingCustomer.id;
+      } else {
+        const { data: createdCustomer, error: customerError } = await neon.from("customers")
+          .insert({ business_id: businessId, full_name: name, phone: normalizedPhone || null })
+          .select("id").single();
+        if (customerError || !createdCustomer) {
+          setError(customerError?.message || "Could not save the customer.");
+          setSaving(false);
+          return;
+        }
+        resolvedCustomerId = createdCustomer.id;
+      }
+    }
     const { error: e } = await neon.rpc("create_sale", {
       p_business_id: businessId,
       p_items: cart.map((x) => ({ product_id: x.product.id, quantity: x.quantity })),
-      p_customer_id: customerId || null,
+      p_customer_id: resolvedCustomerId,
       p_payment_method: paymentMethod,
       p_amount_paid: Number(amountPaid || 0),
       p_discount: Number(discount || 0),
     });
-    if (e) setError(e.message);
+    if (e) setError(`Sale could not be completed: ${e.message}${name ? " The customer record has been saved." : ""}`);
     else {
-      setCart([]); setCustomerId(""); setDiscount("0"); setAmountPaid(""); setPaymentMethod("cash");
+      setCart([]); setCustomerId(""); setCustomerName(""); setCustomerPhone(""); setDiscount("0"); setAmountPaid(""); setPaymentMethod("cash");
       await load();
     }
     setSaving(false);
@@ -94,7 +122,17 @@ export default function Sales() {
         <button type="button" onClick={addItem} disabled={!productId} className="rounded-xl bg-emerald px-3 text-white disabled:opacity-40"><Plus size={19} /></button>
       </div>
       {cart.length > 0 && <div className="divide-y divide-slate-100 rounded-xl border border-slate-100">{cart.map((x) => <div key={x.product.id} className="flex items-center justify-between gap-3 p-3"><div className="min-w-0"><p className="truncate text-sm font-medium text-midnight">{x.product.name}</p><p className="text-xs text-slate-500">{x.quantity} × {kes(x.product.selling_price)}</p></div><div className="flex items-center gap-2"><span className="text-sm font-semibold">{kes(Number(x.product.selling_price) * x.quantity)}</span><button type="button" aria-label={`Remove ${x.product.name}`} onClick={() => setCart((prev) => prev.filter((y) => y.product.id !== x.product.id))} className="p-1 text-slate-400"><Trash2 size={16} /></button></div></div>)}</div>}
-      <select className={field} value={customerId} onChange={(e) => setCustomerId(e.target.value)}><option value="">Walk-in customer</option>{customers.map((c) => <option key={c.id} value={c.id}>{c.full_name}</option>)}</select>
+      <div className="space-y-2 rounded-xl border border-slate-100 p-3">
+        <label className="block text-xs font-semibold text-slate-500">CUSTOMER</label>
+        <select className={field} value={customerId} onChange={(e) => { setCustomerId(e.target.value); setCustomerName(""); setCustomerPhone(""); }}>
+          <option value="">Walk-in / new customer</option>{customers.map((c) => <option key={c.id} value={c.id}>{c.full_name}</option>)}
+        </select>
+        {!customerId && <>
+          <input className={field} placeholder="Customer name (optional)" value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
+          <input className={field} type="tel" placeholder="Customer phone (optional)" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} />
+          <p className="text-xs text-slate-400">A new customer is added to your Customers list when you complete this sale.</p>
+        </>}
+      </div>
       <div className="grid grid-cols-2 gap-2"><input className={field} type="number" min="0" step="0.01" placeholder="Discount (KES)" value={discount} onChange={(e) => setDiscount(e.target.value)} /><input className={field} type="number" min="0" step="0.01" placeholder="Amount paid (KES)" value={amountPaid} onChange={(e) => setAmountPaid(e.target.value)} /></div>
       <select className={field} value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}><option value="cash">Cash</option><option value="mpesa">M-Pesa</option><option value="bank">Bank</option><option value="card">Card</option><option value="other">Other</option></select>
       <div className="flex items-center justify-between border-t border-slate-100 pt-3"><span className="text-sm text-slate-500">Subtotal</span><span className="font-medium">{kes(subtotal)}</span></div>
