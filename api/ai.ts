@@ -125,7 +125,12 @@ async function loadBusinessContext(token: string, businessId: string) {
   };
 }
 
-export default async function handler(request: Request) {
+export async function OPTIONS(request: Request) {
+  const origin = request.headers.get("origin");
+  return new Response(null, { status: 204, headers: corsHeaders(origin) });
+}
+
+export async function POST(request: Request) {
     const origin = request.headers.get("origin");
     const requestOrigin = new URL(request.url).origin;
     const configuredOrigins = (process.env.APP_ORIGINS || DEFAULT_ALLOWED_ORIGINS.join(","))
@@ -133,13 +138,6 @@ export default async function handler(request: Request) {
     const respond = (body: Record<string, unknown>, status = 200) => json(body, status, origin);
     if (origin && origin !== requestOrigin && !configuredOrigins.includes(origin)) {
       return respond({ error: "This app origin is not allowed to use the AI endpoint." }, 403);
-    }
-
-    if (request.method === "OPTIONS") {
-      return new Response(null, { status: 204, headers: corsHeaders(origin) });
-    }
-    if (request.method !== "POST") {
-      return respond({ error: "Method not allowed. Use POST." }, 405);
     }
 
     const authorization = request.headers.get("authorization") || "";
