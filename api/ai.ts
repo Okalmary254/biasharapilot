@@ -1,6 +1,8 @@
-import process from "node:process";
-
 type ChatMessage = { role: "user" | "assistant"; content: string };
+
+const env = (globalThis as typeof globalThis & {
+  process?: { env?: Record<string, string | undefined> };
+}).process?.env ?? {};
 type SaleRow = { total: number | string; status: string };
 type ExpenseRow = { amount: number | string };
 type ProductRow = { name: string; stock_quantity: number | string; low_stock_threshold: number | string };
@@ -33,7 +35,7 @@ const json = (body: Record<string, unknown>, status = 200, origin: string | null
   new Response(JSON.stringify(body), { status, headers: corsHeaders(origin) });
 
 function dataApiBase() {
-  const configured = process.env.NEON_DATA_API_URL || process.env.VITE_NEON_URL;
+  const configured = env.NEON_DATA_API_URL || env.VITE_NEON_URL;
   if (!configured) throw new Error("Missing NEON_DATA_API_URL (or VITE_NEON_URL) server environment variable.");
   return `${configured.replace(/\/+$/, "").replace(/\/rest\/v1$/, "")}/rest/v1`;
 }
@@ -138,7 +140,7 @@ export async function OPTIONS(request: Request) {
 export async function POST(request: Request) {
     const origin = request.headers.get("origin");
     const requestOrigin = new URL(request.url).origin;
-    const configuredOrigins = (process.env.APP_ORIGINS || DEFAULT_ALLOWED_ORIGINS.join(","))
+    const configuredOrigins = (env.APP_ORIGINS || DEFAULT_ALLOWED_ORIGINS.join(","))
       .split(",").map((value) => value.trim()).filter(Boolean);
     const respond = (body: Record<string, unknown>, status = 200) => json(body, status, origin);
     if (origin && origin !== requestOrigin && !configuredOrigins.includes(origin)) {
@@ -149,7 +151,7 @@ export async function POST(request: Request) {
     const token = authorization.match(/^Bearer\s+(.+)$/i)?.[1];
     if (!token) return respond({ error: "Please sign in before using the AI assistant." }, 401);
 
-    const groqKey = process.env.GROQ_API_KEY;
+    const groqKey = env.GROQ_API_KEY;
     if (!groqKey) return respond({ error: "The AI service is not configured. Add GROQ_API_KEY to your server environment." }, 503);
 
     let rawBody: string;
@@ -208,7 +210,7 @@ export async function POST(request: Request) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: process.env.GROQ_MODEL || "openai/gpt-oss-120b",
+          model: env.GROQ_MODEL || "openai/gpt-oss-120b",
           messages: [{ role: "system", content: systemPrompt }, ...messages],
           temperature: 0.4,
           max_completion_tokens: 1_200,
