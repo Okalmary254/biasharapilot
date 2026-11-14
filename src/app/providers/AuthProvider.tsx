@@ -70,9 +70,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setAuthReady(true);
         return false;
       }
-      setSession(data.session);
+      const nextSession = data?.session ?? null;
+      setSession(nextSession);
       setAuthReady(true);
-      return Boolean(data.session);
+      return Boolean(nextSession);
     } catch (error) {
       setSession(null);
       setBusinessId(null);
@@ -92,14 +93,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     void syncSession();
-    const { data } = neon.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
-      if (!nextSession) {
-        setBusinessId(null);
-        setBusinessError(null);
-      }
-    });
-    return () => data.subscription.unsubscribe();
+
+    // Better Auth does not expose Supabase's onAuthStateChange API.
+    // Refresh when the tab becomes active so cross-tab sign-in/out is reflected.
+    const refreshOnFocus = () => {
+      if (document.visibilityState === "visible") void syncSession();
+    };
+    window.addEventListener("focus", refreshOnFocus);
+    document.addEventListener("visibilitychange", refreshOnFocus);
+
+    return () => {
+      window.removeEventListener("focus", refreshOnFocus);
+      document.removeEventListener("visibilitychange", refreshOnFocus);
+    };
   }, [syncSession]);
 
   useEffect(() => {
