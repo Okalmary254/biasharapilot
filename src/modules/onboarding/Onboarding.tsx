@@ -32,8 +32,9 @@ export default function Onboarding() {
       setBusy(false);
       return;
     }
+    // Stay on the onboarding route so the completion screen and its Go to home
+    // button are visible after the business has been created.
     await refreshBusiness();
-    nav("/", { replace: true });
   };
 
   if (businessId) return (
