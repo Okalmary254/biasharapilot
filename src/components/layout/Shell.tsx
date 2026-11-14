@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
-import { Home, Package, Receipt, Sparkles, User, Users, Wallet } from "lucide-react";
+import { Home, Menu, Package, Receipt, Sparkles, User, Users, Wallet, X } from "lucide-react";
 
 const tabs = [
   { to: "/", icon: Home, label: "Overview" },
@@ -11,6 +12,9 @@ const tabs = [
   { to: "/profile", icon: User, label: "My profile" },
 ];
 
+const mobilePrimary = ["/", "/ai", "/profile"];
+const mobileMore = tabs.filter(({ to }) => !mobilePrimary.includes(to));
+
 function Brand() {
   return <div className="flex items-center gap-3 px-3 py-5">
     <div className="grid size-10 place-items-center rounded-xl bg-emerald text-lg font-black text-gold">B</div>
@@ -19,6 +23,8 @@ function Brand() {
 }
 
 export default function Shell() {
+  const [menuOpen, setMenuOpen] = useState(false);
+
   return (
     <div className="min-h-screen bg-cloud lg:pl-64">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-white/10 bg-midnight px-4 lg:flex">
@@ -49,14 +55,52 @@ export default function Shell() {
         <Outlet />
       </main>
 
-      <nav aria-label="Main navigation" className="fixed inset-x-0 bottom-0 z-30 flex gap-1 overflow-x-auto border-t border-white/10 bg-midnight px-2 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] lg:hidden">
-        {tabs.map(({ to, icon: Icon, label }) => (
+      {menuOpen && (
+        <>
+          <button
+            type="button"
+            aria-label="Close navigation menu"
+            onClick={() => setMenuOpen(false)}
+            className="fixed inset-0 z-30 bg-midnight/35 lg:hidden"
+          />
+          <div className="fixed inset-x-3 bottom-[calc(5.25rem+env(safe-area-inset-bottom))] z-40 rounded-2xl border border-slate-200 bg-white p-3 shadow-2xl lg:hidden">
+            <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">More sections</p>
+            <nav aria-label="More navigation" className="grid grid-cols-2 gap-2">
+              {mobileMore.map(({ to, icon: Icon, label }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  onClick={() => setMenuOpen(false)}
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold transition-colors ${isActive ? "bg-emerald/10 text-emerald" : "text-slate-600 hover:bg-slate-50"}`
+                  }
+                >
+                  <Icon size={19} />{label}
+                </NavLink>
+              ))}
+            </nav>
+          </div>
+        </>
+      )}
+
+      <nav aria-label="Main navigation" className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-4 border-t border-white/10 bg-midnight px-2 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] lg:hidden">
+        {tabs.filter(({ to }) => mobilePrimary.includes(to)).map(({ to, icon: Icon, label }) => (
           <NavLink key={to} to={to} end={to === "/"} className={({ isActive }) =>
-            `flex min-w-[4.25rem] shrink-0 flex-col items-center gap-1 rounded-lg px-2 py-1 text-[11px] ${isActive ? "text-gold" : "text-white/60"}`
+            `flex flex-col items-center justify-center gap-1 rounded-lg py-1.5 text-[11px] font-medium ${isActive ? "text-gold" : "text-white/65"}`
           }>
-            <Icon size={20} />{label === "Overview" ? "Home" : label === "Inventory" ? "Stock" : label === "AI Assistant" ? "AI" : label === "My profile" ? "Profile" : label}
+            <Icon size={21} />{to === "/" ? "Home" : to === "/ai" ? "AI" : "Profile"}
           </NavLink>
         ))}
+        <button
+          type="button"
+          aria-label={menuOpen ? "Close menu" : "Open menu"}
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen(open => !open)}
+          className={`flex flex-col items-center justify-center gap-1 rounded-lg py-1.5 text-[11px] font-medium ${menuOpen ? "text-gold" : "text-white/65"}`}
+        >
+          {menuOpen ? <X size={21} /> : <Menu size={21} />}
+          {menuOpen ? "Close" : "More"}
+        </button>
       </nav>
     </div>
   );
