@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { FormEvent, KeyboardEvent } from "react";
 import { Bot, Send, Sparkles, TrendingUp, Package, Wallet, Users, RefreshCw } from "lucide-react";
-import { authClient, neon } from "../../services/neon/client";
+import { neon } from "../../services/neon/client";
 import { useAuth } from "../../app/providers/useAuth";
 
 type Message = { role: "user" | "assistant"; content: string };
@@ -57,8 +57,12 @@ export default function AIAssistant() {
     const next:Message[]=[...messages,{role:"user",content:prompt}];
     setMessages(next);setInput("");setSending(true);setError("");
     try{
-      const token = await authClient.getJWTToken();
-      if (!token) throw new Error("Your sign-in session could not provide a database access token. Please sign out and sign in again.");
+      const authUrl = (import.meta.env.VITE_NEON_AUTH_URL as string | undefined) || (import.meta.env.VITE_NEON_URL as string | undefined);
+      if (!authUrl) throw new Error("Neon Auth URL is not configured.");
+      const authResponse = await fetch(authUrl + "/get-session", { method: "GET", credentials: "include", headers: { Accept: "application/json" } });
+      if (!authResponse.ok) throw new Error("Could not retrieve your database access token (HTTP " + authResponse.status + ").");
+      const token = authResponse.headers.get("set-auth-jwt");
+      if (!token) throw new Error("Neon Auth did not return a database access token. Please sign out and sign in again.");
       if(!businessId)throw new Error("No business is linked to your account yet.");
       const response=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json","Authorization":`Bearer ${token}`},body:JSON.stringify({messages:next.slice(-12),businessId})});
       const responseText = await response.text();
