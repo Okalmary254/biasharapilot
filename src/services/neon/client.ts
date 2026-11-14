@@ -1,4 +1,4 @@
-import { createClient, SupabaseAuthAdapter } from "@neon/neon-js";
+import { createClient } from "@neon/neon-js";
 
 const authUrl =
   import.meta.env.VITE_NEON_AUTH_URL || import.meta.env.VITE_NEON_URL;
@@ -16,17 +16,12 @@ if (!dataApiUrl) {
   );
 }
 
-// Keep authentication and database access pointed at their separate Neon endpoints.
+// Neon Auth uses Better Auth by default; database requests use the separate Data API.
 export const neon = createClient({
-  auth: {
-    adapter: SupabaseAuthAdapter(),
-    url: authUrl,
-  },
-  dataApi: {
-    url: dataApiUrl,
-  },
+  auth: { url: authUrl },
+  dataApi: { url: dataApiUrl },
 });
 
 export type Session = NonNullable<
-  Awaited<ReturnType<typeof neon.auth.getSession>>["data"]["session"]
+  NonNullable<Awaited<ReturnType<typeof neon.auth.getSession>>["data"]>["session"]
 >;
