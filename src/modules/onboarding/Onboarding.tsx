@@ -8,7 +8,7 @@ const field = "w-full rounded-xl border border-gray-300 bg-white px-4 py-3";
 const types = ["Retail shop", "Wholesale", "Salon / Barber", "Food & Beverage", "Services", "Other"];
 
 export default function Onboarding() {
-  const { refreshBusiness } = useAuth();
+  const { refreshBusiness, businessId } = useAuth();
   const nav = useNavigate();
   const [name, setName] = useState("");
   const [type, setType] = useState(types[0]);
@@ -35,6 +35,15 @@ export default function Onboarding() {
     await refreshBusiness();
     nav("/", { replace: true });
   };
+
+  if (businessId) return (
+    <main className="flex min-h-screen flex-col items-center justify-center gap-4 bg-cloud p-6 text-center">
+      <div className="grid size-16 place-items-center rounded-2xl bg-emerald/10 text-emerald text-2xl font-bold">✓</div>
+      <h2 className="text-2xl font-bold text-midnight">Your business is ready</h2>
+      <p className="max-w-sm text-sm text-slate-500">Your workspace has been set up. Continue to your dashboard to start managing sales, stock and customers.</p>
+      <button type="button" onClick={() => nav("/", { replace: true })} className="w-full max-w-sm rounded-xl bg-emerald py-3 font-semibold text-white">Go to home</button>
+    </main>
+  );
 
   return (
     <form onSubmit={create} className="min-h-screen bg-cloud p-6 flex flex-col justify-center gap-3">
