@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { ArrowRight, Eye, EyeOff, LockKeyhole, Mail, Sparkles, UserRound } from "lucide-react";
 import { neon } from "../../services/neon/client";
 import { useAuth } from "../../app/providers/useAuth";
@@ -8,7 +8,8 @@ import { useAuth } from "../../app/providers/useAuth";
 const field = "w-full rounded-xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm text-midnight outline-none placeholder:text-slate-400 focus:border-emerald focus:ring-2 focus:ring-emerald/10";
 
 export default function AuthPage() {
-  const { session } = useAuth();
+  const { session, syncSession } = useAuth();
+  const navigate = useNavigate();
   const [mode, setMode] = useState<"login" | "register">("login");
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [visible, setVisible] = useState(false);
@@ -24,6 +25,7 @@ export default function AuthPage() {
       if (mode === "login") {
         const { error: e } = await neon.auth.signInWithPassword({ email: form.email.trim(), password: form.password });
         if (e) setError(e.message);
+        else if (await syncSession()) navigate("/", { replace: true });
       } else {
         const { data, error: e } = await neon.auth.signUp({
           email: form.email.trim(), password: form.password,
@@ -36,7 +38,11 @@ export default function AuthPage() {
           setNotice("Your account was created. You can now sign in with your email and password.");
           setMode("login");
           setForm(current => ({ ...current, password: "" }));
-        } else setNotice("Account created successfully. Let's set up your business.");
+        } else {
+          setNotice("Account created successfully. Redirecting…");
+          await syncSession();
+          navigate("/", { replace: true });
+        }
       }
     } catch { setError("We couldn't complete that request. Check your connection and try again."); }
     finally { setBusy(false); }
