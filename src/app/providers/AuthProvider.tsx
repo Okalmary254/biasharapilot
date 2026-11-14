@@ -4,6 +4,29 @@ import { neon } from "../../services/neon/client";
 import type { Session } from "../../services/neon/client";
 import { AuthContext } from "./AuthContext";
 
+function describeDataApiError(error: unknown): string {
+  if (typeof error !== "object" || error === null) {
+    return error instanceof Error ? error.message : "Unable to check your business membership.";
+  }
+
+  const value = error as {
+    message?: unknown;
+    code?: unknown;
+    details?: unknown;
+    hint?: unknown;
+    status?: unknown;
+  };
+  const parts = [
+    typeof value.message === "string" ? value.message : "Business membership lookup failed.",
+    typeof value.code === "string" ? `Code: ${value.code}` : null,
+    typeof value.status === "number" ? `HTTP: ${value.status}` : null,
+    typeof value.details === "string" && value.details ? `Details: ${value.details}` : null,
+    typeof value.hint === "string" && value.hint ? `Hint: ${value.hint}` : null,
+  ].filter(Boolean);
+
+  return parts.join(" | ");
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [authReady, setAuthReady] = useState(false);
@@ -28,12 +51,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .maybeSingle();
 
       if (error) {
-        setBusinessError(error.message);
+        setBusinessError(describeDataApiError(error));
         return;
       }
       setBusinessId(data?.business_id ?? null);
     } catch (error) {
-      setBusinessError(error instanceof Error ? error.message : "Unable to check your business membership.");
+      setBusinessError(describeDataApiError(error));
     }
   }, [userId]);
 
