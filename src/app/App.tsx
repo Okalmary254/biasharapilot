@@ -39,9 +39,16 @@ function RememberLastPage() {
 }
 
 function Guard({ requireBusiness }: { requireBusiness: boolean }) {
-  const { session, businessId, loading } = useAuth();
+  const { session, businessId, businessError, loading, refreshBusiness } = useAuth();
   if (loading) return <Splash />;
   if (!session) return <Navigate to="/auth" replace />;
+  if (businessError) return (
+    <main className="flex min-h-screen flex-col items-center justify-center gap-4 bg-cloud p-6 text-center">
+      <h1 className="text-xl font-bold text-midnight">We couldn't verify your business access</h1>
+      <p className="max-w-lg text-sm text-slate-600">{businessError}</p>
+      <button onClick={() => void refreshBusiness()} className="rounded-xl bg-emerald px-5 py-3 font-semibold text-white">Try again</button>
+    </main>
+  );
   if (requireBusiness && !businessId) return <Navigate to="/onboarding" replace />;
   if (!requireBusiness && businessId) return <Navigate to="/" replace />;
   return <Outlet />;
