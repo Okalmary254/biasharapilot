@@ -1,3 +1,5 @@
+import process from "node:process";
+
 type ChatMessage = { role: "user" | "assistant"; content: string };
 type SaleRow = { total: number | string; status: string };
 type ExpenseRow = { amount: number | string };
@@ -49,8 +51,11 @@ async function dataRequest<T>(
     cache: "no-store",
   });
   if (!response.ok) {
-    if (response.status === 401 || response.status === 403) {
-      throw new Error("Your Neon session could not access business data. Please sign in again and check your Data API permissions.");
+    if (response.status === 401) {
+      throw new Error("Neon rejected the supplied session token (HTTP 401). Please sign in again; if this continues, the auth token format or Neon Data API authentication configuration needs checking.");
+    }
+    if (response.status === 403) {
+      throw new Error(`Neon Data API denied access to ${table} (HTTP 403). This is a database permission or row-level security issue, not necessarily an expired session.`);
     }
     throw new Error(`Neon Data API request failed for ${table} (HTTP ${response.status}).`);
   }
@@ -233,7 +238,8 @@ export async function POST(request: Request) {
         return respond({ error: "The AI service is missing its Neon Data API URL configuration." }, 503);
       }
       if (message.includes("access this business")) return respond({ error: message }, 403);
-      if (message.includes("Neon session")) return respond({ error: message }, 401);
+      if (message.includes("Neon rejected the supplied session token")) return respond({ error: message }, 401);
+      if (message.includes("Neon Data API denied access")) return respond({ error: message }, 403);
       if (message.includes("AbortError") || message.includes("TimeoutError")) {
         return respond({ error: "The AI request timed out. Please try again." }, 504);
       }
