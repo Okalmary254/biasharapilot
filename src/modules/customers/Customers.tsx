@@ -4,11 +4,14 @@ import { neon } from "../../services/neon/client";
 import { useAuth } from "../../app/providers/useAuth";
 
 type Customer = { id: string; full_name: string; phone: string | null; email: string | null; created_at: string };
+type SaleRecord = { id: string; customer_id: string | null };
+type SaleItem = { sale_id: string; product_name: string; quantity: number | string };
 const field = "w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-emerald";
 
 export default function Customers() {
   const { businessId } = useAuth();
   const [items, setItems] = useState<Customer[]>([]);
+  const [purchaseHistory, setPurchaseHistory] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
@@ -19,8 +22,27 @@ export default function Customers() {
   const load = useCallback(async () => {
     if (!businessId) return;
     setLoading(true);
-    const { data, error: e } = await neon.from("customers").select("id,full_name,phone,email,created_at").eq("business_id", businessId).order("created_at", { ascending: false });
-    if (e) setError(e.message); else { setItems((data ?? []) as Customer[]); setError(""); }
+    const [customerResult, salesResult, itemResult] = await Promise.all([
+      neon.from("customers").select("id,full_name,phone,email,created_at").eq("business_id", businessId).order("created_at", { ascending: false }),
+      neon.from("sales").select("id,customer_id").eq("business_id", businessId).not("customer_id", "is", null),
+      neon.from("sale_items").select("sale_id,product_name,quantity").eq("business_id", businessId),
+    ]);
+    const e = customerResult.error || salesResult.error || itemResult.error;
+    if (e) setError(e.message);
+    else {
+      setItems((customerResult.data ?? []) as Customer[]);
+      const saleToCustomer = new Map(((salesResult.data ?? []) as SaleRecord[]).map((sale) => [sale.id, sale.customer_id as string]));
+      const history: Record<string, string[]> = {};
+      for (const item of (itemResult.data ?? []) as SaleItem[]) {
+        const customer = saleToCustomer.get(item.sale_id);
+        if (customer) {
+          const label = `${item.product_name} × ${Number(item.quantity).toLocaleString("en-KE")}`;
+          history[customer] = [...(history[customer] ?? []), label];
+        }
+      }
+      setPurchaseHistory(history);
+      setError("");
+    }
     setLoading(false);
   }, [businessId]);
   useEffect(() => { void load(); }, [load]);
@@ -39,6 +61,8 @@ export default function Customers() {
     <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3"><Search size={18} className="text-slate-400" /><input className="w-full py-3 text-sm outline-none" placeholder="Search customers" value={search} onChange={(e) => setSearch(e.target.value)} /></label>
     {open && <form onSubmit={save} className="space-y-3 rounded-2xl bg-white p-4 shadow-sm"><h2 className="font-semibold text-midnight">Add customer</h2><input className={field} placeholder="Full name" required value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} /><input className={field} placeholder="Phone number" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /><input className={field} type="email" placeholder="Email (optional)" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /><div className="flex gap-2"><button disabled={saving} className="flex-1 rounded-xl bg-midnight py-3 text-sm font-semibold text-white">{saving ? "Saving…" : "Save customer"}</button><button type="button" onClick={() => setOpen(false)} className="rounded-xl border px-4 text-sm">Cancel</button></div></form>}
     {error && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}
-    {loading ? <p className="py-10 text-center text-sm text-slate-500">Loading customers…</p> : filtered.length === 0 ? <div className="rounded-2xl bg-white p-8 text-center"><UserRound className="mx-auto mb-2 text-slate-300" size={30} /><p className="font-medium text-midnight">No customers yet</p><p className="mt-1 text-sm text-slate-500">Save customer contacts here for easier follow-up.</p></div> : <section className="space-y-2">{filtered.map((c) => <article key={c.id} className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-sm"><div className="grid size-10 shrink-0 place-items-center rounded-full bg-emerald/10 font-semibold text-emerald">{c.full_name.slice(0,1).toUpperCase()}</div><div className="min-w-0"><h2 className="truncate font-semibold text-midnight">{c.full_name}</h2><p className="truncate text-xs text-slate-500">{c.phone || c.email || "No contact details"}</p></div></article>)}</section>}
+    {loading ? <p className="py-10 text-center text-sm text-slate-500">Loading customers…</p> : filtered.length === 0 ? <div className="rounded-2xl bg-white p-8 text-center"><UserRound className="mx-auto mb-2 text-slate-300" size={30} /><p className="font-medium text-midnight">No customers yet</p><p className="mt-1 text-sm text-slate-500">Save customer contacts here for easier follow-up.</p></div> : <section className="space-y-2">{filtered.map((c) => <article key={c.id} className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-sm"><div className="grid size-10 shrink-0 place-items-center rounded-full bg-emerald/10 font-semibold text-emerald">{c.full_name.slice(0,1).toUpperCase()}</div><div className="min-w-0"><h2 className="truncate font-semibold text-midnight">{c.full_name}</h2><p className="truncate text-xs text-slate-500">{c.phone || c.email || "No contact details"}</p>
+      {purchaseHistory[c.id]?.length ? <p className="mt-1 text-xs text-emerald">Bought: {Array.from(new Set(purchaseHistory[c.id])).join(", ")}</p> : <p className="mt-1 text-xs text-slate-400">No purchases recorded yet</p>}
+    </div></article>)}</section>}
   </main>;
 }
