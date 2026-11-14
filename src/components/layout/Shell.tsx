@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from "react-router-dom";
-import { Home, Package, Receipt, Sparkles, User, Users, Wallet, PanelLeftClose } from "lucide-react";
+import { Home, Package, Receipt, Sparkles, User, Users, Wallet } from "lucide-react";
 
 const tabs = [
   { to: "/", icon: Home, label: "Overview" },
