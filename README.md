@@ -17,15 +17,16 @@ React + TypeScript + Vite + Tailwind v4 + Neon (Postgres, Managed Better Auth, D
    - `neon/migrations/003_operational_write_policies.sql`
    - `neon/migrations/004_sales_workflow.sql`
    - `neon/migrations/005_auth_schema_permissions.sql`
+   - `neon/migrations/006_products_permissions.sql`
 3. Set `VITE_NEON_URL` to the Neon Data API base URL. Do not put a database connection string/password in browser code.
-4. Add your local and production origins to Neon Auth trusted origins and Data API CORS.
+4. Add your local and production origins to Neon Auth trusted origins and Data API CORS. The app remembers the last visited authenticated page in the current browser session and restores it when returning to the dashboard/root route.
 5. In **Settings → Better Auth → Email and password**, keep **Sign-up with Email** enabled and leave **Verify at Sign-up** disabled for now. This allows email/password registration without SMTP while email verification is deferred.
 6. To enable Google sign-in, open **Settings → Better Auth → OAuth providers** and enable Google. Neon provides shared Google credentials for development/testing. For production, create your own Google OAuth Web application in Google Cloud Console, add the exact callback URL shown by Neon (`{NEON_AUTH_BASE_URL}/callback/google`) as an Authorized redirect URI, then paste the Google Client ID and Client Secret into the Google provider settings in Neon. Add the app origin (local and deployed) to Neon Auth trusted domains. In Google OAuth branding, use **BiasharaPilot AI** as the app name. Google OAuth consent screen in Testing mode only permits listed test users.
 7. Keep the production Vercel domain in Neon Auth trusted domains and test both email/password and Google sign-in.
 
 ## Groq AI endpoint
 
-The Vercel serverless endpoint lives at `api/ai.ts` and is called by the assistant at `/api/ai` by default. `vercel.json` routes client-side React paths back to `index.html`, while Vercel serves the `/api/ai` function route. The function uses a standard Request/Response handler. It:
+The stock/product write policies are defined in migrations `003` and `006`; run all migrations in order on the same Neon branch used by the app. The Vercel serverless endpoint lives at `api/ai.ts` and is called by the assistant at `/api/ai` by default. `vercel.json` routes client-side React paths back to `index.html`, while Vercel serves the `/api/ai` function route. The function uses a standard Request/Response handler. It:
 
 - Requires a signed-in Neon session JWT in the Bearer header.
 - Checks the requested business against `business_members` through the Neon Data API, so Neon validates the token and applies RLS before any business data is read.
