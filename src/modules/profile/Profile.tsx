@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { Building2, Check, Globe2, LogOut, Mail, Phone, Save, ShieldCheck, UserRound, Crown, ArrowUpRight, Sparkles, KeyRound, GitBranch, Users, BarChart3, ShoppingCart, Megaphone, LockKeyhole } from "lucide-react";
+import { Building2, Check, Globe2, LogOut, Mail, Phone, Save, ShieldCheck, UserRound, Crown, ArrowUpRight, Sparkles, KeyRound, GitBranch, Users, BarChart3, ShoppingCart, Megaphone, LockKeyhole, BadgeCheck } from "lucide-react";
 import { neon, authClient } from "../../services/neon/client";
 import { useAuth } from "../../app/providers/useAuth";
 
@@ -12,6 +12,9 @@ type SubscriptionInfo = { plan_id: string; status: string; current_period_end: s
 const field = "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm text-midnight outline-none focus:border-emerald focus:ring-2 focus:ring-emerald/10";
 const money = (value: number) => `KSh ${value.toLocaleString("en-KE")}`;
 
+type EmailVerificationClient = { emailOtp: { sendVerificationOtp: (input: { email: string; type: "email-verification" }) => Promise<{ error: { message?: string } | null }>; verifyEmail: (input: { email: string; otp: string }) => Promise<{ error: { message?: string } | null }> } };
+const emailVerificationClient = authClient as unknown as EmailVerificationClient;
+
 type ManagedPasswordResetClient = {
   forgetPassword: { emailOtp: (input: { email: string }) => Promise<{ error: { message?: string } | null }> };
   emailOtp: { resetPassword: (input: { email: string; otp: string; password: string }) => Promise<{ error: { message?: string } | null }> };
@@ -19,7 +22,7 @@ type ManagedPasswordResetClient = {
 const passwordResetClient = authClient as unknown as ManagedPasswordResetClient;
 
 export default function Profile() {
-  const { session, businessId, clearLocalSession } = useAuth();
+  const { session, businessId, clearLocalSession, syncSession } = useAuth();
   const navigate = useNavigate();
   const [profile,setProfile]=useState<ProfileRecord>({full_name:"",phone:"",preferred_language:"en"});
   const [business,setBusiness]=useState<Business|null>(null);
@@ -29,6 +32,7 @@ export default function Profile() {
   const [loading,setLoading]=useState(true); const [saving,setSaving]=useState(false); const [signingOut,setSigningOut]=useState(false);
   const [error,setError]=useState(""); const [success,setSuccess]=useState("");
   const [resetEmail,setResetEmail]=useState(session?.user.email??"");
+  const [verifyCode,setVerifyCode]=useState(""); const [verifyBusy,setVerifyBusy]=useState(false); const [verifyNotice,setVerifyNotice]=useState(""); const [verifyError,setVerifyError]=useState(""); const [verifySent,setVerifySent]=useState(false);
   const [resetOtp,setResetOtp]=useState(""); const [newPassword,setNewPassword]=useState(""); const [confirmPassword,setConfirmPassword]=useState("");
   const [otpSent,setOtpSent]=useState(false); const [resetBusy,setResetBusy]=useState(false); const [resetNotice,setResetNotice]=useState(""); const [resetError,setResetError]=useState("");
 
@@ -75,6 +79,17 @@ export default function Profile() {
     const {error:e2}=await neon.from("profiles").update({full_name:profile.full_name.trim(),phone:profile.phone.trim()||null,preferred_language:profile.preferred_language,updated_at:new Date().toISOString()}).eq("id",session.user.id);
     if(e2)setError(e2.message);else setSuccess("Your profile has been updated.");
     setSaving(false);
+  };
+
+  const sendVerification=async()=>{
+    const email=session?.user.email; if(!email)return; setVerifyBusy(true);setVerifyError("");setVerifyNotice("");
+    try{const {error:e}=await emailVerificationClient.emailOtp.sendVerificationOtp({email,type:"email-verification"});if(e)throw e;setVerifySent(true);setVerifyNotice("A verification code has been sent. Check your inbox and spam folder.");}
+    catch(e){setVerifyError(e instanceof Error?e.message:"Unable to send a verification code.");}finally{setVerifyBusy(false);}
+  };
+  const confirmEmailVerification=async(e:FormEvent<HTMLFormElement>)=>{
+    e.preventDefault();const email=session?.user.email;if(!email)return;setVerifyBusy(true);setVerifyError("");setVerifyNotice("");
+    try{const {error:e}=await emailVerificationClient.emailOtp.verifyEmail({email,otp:verifyCode.trim()});if(e)throw e;await syncSession();setVerifyNotice("Your email has been verified.");setVerifySent(false);setVerifyCode("");}
+    catch(e){setVerifyError(e instanceof Error?e.message:"Email verification failed. Request a new code and try again.");}finally{setVerifyBusy(false);}
   };
 
   const requestReset=async(e:FormEvent<HTMLFormElement>)=>{
