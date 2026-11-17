@@ -1,12 +1,10 @@
 import { useEffect, useState } from "react";
-import { ArrowDownRight, ArrowUpRight, Boxes, CircleDollarSign, ShoppingBag, Users, Wallet, Sparkles, ArrowRight, Building2 } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Boxes, CircleDollarSign, ShoppingBag, Users, Wallet, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { neon } from "../../services/neon/client";
 import { useAuth } from "../../app/providers/useAuth";
 
 const kes = (n: number) => `KSh ${n.toLocaleString("en-KE", { maximumFractionDigits: 0 })}`;
-
-type BusinessSummary = { name: string; business_type: string | null; county: string | null };
 
 export default function Dashboard() {
   const { businessId, session } = useAuth();
@@ -15,7 +13,6 @@ export default function Dashboard() {
   const [customers, setCustomers] = useState(0);
   const [lowStock, setLowStock] = useState(0);
   const [firstName, setFirstName] = useState("there");
-  const [business, setBusiness] = useState<BusinessSummary|null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -34,8 +31,7 @@ export default function Dashboard() {
       neon.from("customers").select("id", { count: "exact", head: true }).eq("business_id", businessId),
       neon.from("products").select("stock_quantity, low_stock_threshold").eq("business_id", businessId).eq("is_active", true),
       neon.from("profiles").select("full_name").eq("id", session.user.id).maybeSingle(),
-      neon.from("businesses").select("name,business_type,county").eq("id", businessId).maybeSingle(),
-    ]).then(([s, e, c, p, profile, businessResult]) => {
+    ]).then(([s, e, c, p, profile]) => {
       if (!active) return;
       setSales((s.data ?? []).reduce((sum, row) => sum + Number(row.total), 0));
       setExpenses((e.data ?? []).reduce((sum, row) => sum + Number(row.amount), 0));
@@ -43,7 +39,6 @@ export default function Dashboard() {
       setLowStock((p.data ?? []).filter(row => Number(row.stock_quantity) <= Number(row.low_stock_threshold)).length);
       const fullName = profile.data?.full_name?.trim() ?? "";
       setFirstName(fullName ? fullName.split(/\s+/)[0] : "there");
-      setBusiness(businessResult.data as BusinessSummary|null);
       setLoading(false);
     }).catch(() => { if (active) setLoading(false); });
     return () => { active = false; };
