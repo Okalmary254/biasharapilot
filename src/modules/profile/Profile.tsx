@@ -12,6 +12,12 @@ type SubscriptionInfo = { plan_id: string; status: string; current_period_end: s
 const field = "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm text-midnight outline-none focus:border-emerald focus:ring-2 focus:ring-emerald/10";
 const money = (value: number) => `KSh ${value.toLocaleString("en-KE")}`;
 
+type ManagedPasswordResetClient = {
+  forgetPassword: { emailOtp: (input: { email: string }) => Promise<{ error: { message?: string } | null }> };
+  emailOtp: { resetPassword: (input: { email: string; otp: string; password: string }) => Promise<{ error: { message?: string } | null }> };
+};
+const passwordResetClient = authClient as unknown as ManagedPasswordResetClient;
+
 export default function Profile() {
   const { session, businessId, clearLocalSession } = useAuth();
   const navigate = useNavigate();
@@ -74,7 +80,7 @@ export default function Profile() {
   const requestReset=async(e:FormEvent<HTMLFormElement>)=>{
     e.preventDefault();setResetBusy(true);setResetError("");setResetNotice("");
     try{
-      const {error:e2}=await authClient.forgetPassword.emailOtp({email:resetEmail.trim()});
+      const {error:e2}=await passwordResetClient.forgetPassword.emailOtp({email:resetEmail.trim()});
       if(e2)throw e2;
       setOtpSent(true);setResetNotice("A password reset code has been sent to your email. Check your inbox and spam folder.");
     }catch(e){setResetError(e instanceof Error?e.message:"Unable to send a password reset code. Please try again.");}
@@ -85,7 +91,7 @@ export default function Profile() {
     if(newPassword.length<8){setResetError("Your new password must be at least 8 characters.");setResetBusy(false);return;}
     if(newPassword!==confirmPassword){setResetError("The passwords do not match.");setResetBusy(false);return;}
     try{
-      const {error:e2}=await authClient.emailOtp.resetPassword({email:resetEmail.trim(),otp:resetOtp.trim(),password:newPassword});
+      const {error:e2}=await passwordResetClient.emailOtp.resetPassword({email:resetEmail.trim(),otp:resetOtp.trim(),password:newPassword});
       if(e2)throw e2;
       setOtpSent(false);setResetOtp("");setNewPassword("");setConfirmPassword("");
       setResetNotice("Your password has been changed successfully. Use your new password the next time you sign in.");
@@ -98,7 +104,7 @@ export default function Profile() {
     catch(e){console.warn("Remote sign-out failed; clearing local session.",e);}
     finally{clearLocalSession();navigate("/auth",{replace:true});setSigningOut(false);}
   };
-  const initials=(profile.full_name||session?.user.email||"BP").split(/[ @]/).filter(Boolean).slice(0,2).map(x=>x[0].toUpperCase()).join("");
+  const initials=(profile.full_name||session?.user.email||"BP").split(/[ @]/).filter(Boolean).slice(0,2).map((x:string)=>x[0].toUpperCase()).join("");
   const paid=Boolean(plan&&plan.id!=="free"&&subscription?.status==="active");
 
   return <main className="mx-auto max-w-2xl space-y-5 p-4 sm:p-6">
