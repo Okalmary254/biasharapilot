@@ -24,7 +24,6 @@ function BackHomeButton() {
 
 export default function Onboarding() {
   const { refreshBusiness, businessId } = useAuth();
-  const nav = useNavigate();
   const [name, setName] = useState("");
   const [type, setType] = useState(types[0]);
   const [county, setCounty] = useState("Nairobi");
