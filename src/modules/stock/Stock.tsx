@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { AlertTriangle, Archive, Plus, Search } from "lucide-react";
 import { neon } from "../../services/neon/client";
 import { useAuth } from "../../app/providers/useAuth";
@@ -20,6 +21,9 @@ const field = "w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text
 
 export default function Stock() {
   const { businessId } = useAuth();
+  const navigate = useNavigate();
+  const [productLimit, setProductLimit] = useState<number | null>(20);
+  const [planName, setPlanName] = useState("Free");
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -36,6 +40,22 @@ export default function Stock() {
       .eq("business_id", businessId).eq("is_active", true).order("name");
     if (queryError) setError(queryError.message);
     else { setProducts((data ?? []) as Product[]); setError(""); }
+
+    const { data: subscription } = await neon.from("business_subscriptions")
+      .select("plan_id,status,current_period_end")
+      .eq("business_id", businessId).eq("status", "active")
+      .maybeSingle();
+    if (subscription?.plan_id) {
+      const { data: plan } = await neon.from("subscription_plans")
+        .select("name,product_limit").eq("id", subscription.plan_id).maybeSingle();
+      if (plan) {
+        setPlanName(plan.name);
+        setProductLimit(plan.product_limit === null ? null : Number(plan.product_limit));
+      }
+    } else {
+      setPlanName("Free");
+      setProductLimit(20);
+    }
     setLoading(false);
   }, [businessId]);
 
@@ -72,17 +92,19 @@ export default function Stock() {
   };
 
   const visible = products.filter((p) => `${p.name} ${p.sku ?? ""}`.toLowerCase().includes(search.toLowerCase()));
+  const productLimitReached = productLimit !== null && products.length >= productLimit;
 
   return (
     <main className="space-y-4 p-4">
       <header className="flex items-center justify-between gap-3">
-        <div><p className="text-xs font-semibold uppercase tracking-wider text-emerald">Inventory</p><h1 className="text-2xl font-bold text-midnight">Stock</h1><p className="text-sm text-slate-500">{products.length} active products</p></div>
-        <button onClick={() => setShowForm((v) => !v)} className="flex items-center gap-2 rounded-xl bg-emerald px-4 py-3 text-sm font-semibold text-white"><Plus size={17} /> Add item</button>
+        <div><p className="text-xs font-semibold uppercase tracking-wider text-emerald">Inventory</p><h1 className="text-2xl font-bold text-midnight">Stock</h1><p className="text-sm text-slate-500">{products.length} / {productLimit === null ? "∞" : productLimit} active products · {planName} plan</p></div>
+        <button disabled={productLimitReached} onClick={() => setShowForm((v) => !v)} className="flex items-center gap-2 rounded-xl bg-emerald px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"><Plus size={17} /> Add item</button>
       </header>
 
       <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3"><Search size={18} className="text-slate-400" /><input className="w-full py-3 text-sm outline-none" placeholder="Search products or SKU" value={search} onChange={(e) => setSearch(e.target.value)} /></label>
 
-      {showForm && <form onSubmit={createProduct} className="space-y-3 rounded-2xl bg-white p-4 shadow-sm">
+      {productLimitReached && <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"><span>You’ve reached the {productLimit}-product limit on your {planName} plan.</span><button type="button" onClick={() => navigate("/subscription")} className="font-semibold underline">Upgrade plan</button></div>}
+      {showForm && !productLimitReached && <form onSubmit={createProduct} className="space-y-3 rounded-2xl bg-white p-4 shadow-sm">
         <h2 className="font-semibold text-midnight">New product</h2>
         <input className={field} placeholder="Product name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
         <input className={field} placeholder="SKU (optional)" value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} />
