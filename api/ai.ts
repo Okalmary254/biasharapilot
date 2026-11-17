@@ -64,6 +64,30 @@ async function dataRequest<T>(
   return { data: await response.json() as T, response };
 }
 
+async function consumeAiMessage(token: string, businessId: string): Promise<{
+  allowed: boolean; plan_id: string; plan_name: string; limit: number; used: number; remaining: number; period_start: string;
+}> {
+  const response = await fetch(`${dataApiBase()}/rpc/consume_ai_message`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      Prefer: "return=representation",
+    },
+    body: JSON.stringify({ p_business_id: businessId }),
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    if (response.status === 401) throw new Error("Neon rejected the supplied session token (HTTP 401).");
+    if (response.status === 403) throw new Error("Neon denied permission to check AI plan usage.");
+    throw new Error(`Could not verify AI plan allowance (HTTP ${response.status}).`);
+  }
+  return await response.json() as {
+    allowed: boolean; plan_id: string; plan_name: string; limit: number; used: number; remaining: number; period_start: string;
+  };
+}
+
 async function loadBusinessContext(token: string, businessId: string) {
   // This membership lookup is evaluated by Neon with the user's JWT and RLS.
   // A client-supplied business ID is never trusted unless Neon confirms access.
@@ -195,6 +219,14 @@ export async function POST(request: Request) {
 
     try {
       const businessContext = await loadBusinessContext(token, body.businessId);
+      const usage = await consumeAiMessage(token, body.businessId);
+      if (!usage.allowed) {
+        return respond({
+          error: `You've used all ${usage.limit} AI messages included in your ${usage.plan_name} plan for this month. Upgrade your plan to continue.`,
+          code: "AI_LIMIT_REACHED",
+          usage,
+        }, 429);
+      }
       const systemPrompt = [
         "You are BiasharaPilot AI, a practical and trustworthy business assistant for Kenyan small and medium-sized businesses.",
         "Use KSh/KES for money. Be clear, concise, supportive, and action-oriented. Use Kenyan business realities where relevant.",
@@ -238,7 +270,7 @@ export async function POST(request: Request) {
       };
       const reply = completion.choices?.[0]?.message?.content?.trim();
       if (!reply) return respond({ error: "Groq returned an empty response. Please try again." }, 502);
-      return respond({ reply });
+      return respond({ reply, usage });
     } catch (error) {
       const message = error instanceof Error ? error.message : "";
       if (message.includes("Missing NEON_DATA_API_URL")) {
