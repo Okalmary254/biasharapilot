@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
-import { Home, Menu, Package, Receipt, Sparkles, User, Users, Wallet, X } from "lucide-react";
+import { CreditCard, Home, Menu, Package, Receipt, Sparkles, User, Users, Wallet, X } from "lucide-react";
 
 const tabs = [
   { to: "/", icon: Home, label: "Overview" },
@@ -10,6 +10,7 @@ const tabs = [
   { to: "/sales", icon: Receipt, label: "Sales" },
   { to: "/ai", icon: Sparkles, label: "AI Assistant" },
   { to: "/profile", icon: User, label: "My profile" },
+  { to: "/subscription", icon: CreditCard, label: "Plans & billing" },
 ];
 
 const mobilePrimary = ["/", "/ai", "/profile"];
