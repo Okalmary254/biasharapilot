@@ -66,7 +66,7 @@ export default function Stock() {
     event.preventDefault();
     if (!businessId) return;
     setSaving(true); setError("");
-    const { error: insertError } = await neon.from("products").insert({
+    const productValues = {
       business_id: businessId,
       name: form.name.trim(),
       sku: form.sku.trim() || null,
@@ -75,17 +75,28 @@ export default function Stock() {
       stock_quantity: Number(form.stock_quantity || 0),
       low_stock_threshold: Number(form.low_stock_threshold || 5),
       unit: form.unit.trim() || "piece",
-    });
-    if (insertError) setError(insertError.message);
+    };
+    const result = editingProductId
+      ? await neon.from("products").update(productValues).eq("id", editingProductId).eq("business_id", businessId)
+      : await neon.from("products").insert(productValues);
+    if (result.error) setError(result.error.message);
     else {
       setForm({ name: "", sku: "", cost_price: "", selling_price: "", stock_quantity: "", low_stock_threshold: "5", unit: "piece" });
       setShowForm(false);
+      setEditingProductId(null);
       await load();
     }
     setSaving(false);
   };
 
-  const editProduct = (product: Product) => {\n    setEditingProductId(product.id);\n    setForm({ name: product.name, sku: product.sku ?? "", cost_price: String(product.cost_price ?? ""), selling_price: String(product.selling_price), stock_quantity: String(product.stock_quantity), low_stock_threshold: String(product.low_stock_threshold), unit: product.unit || "piece" });\n    setShowForm(true);\n    setError("");\n  };\n\n  const archiveProduct = async (id: string) => {
+  const editProduct = (product: Product) => {
+    setEditingProductId(product.id);
+    setForm({ name: product.name, sku: product.sku ?? "", cost_price: String(product.cost_price ?? ""), selling_price: String(product.selling_price), stock_quantity: String(product.stock_quantity), low_stock_threshold: String(product.low_stock_threshold), unit: product.unit || "piece" });
+    setShowForm(true);
+    setError("");
+  };
+
+  const archiveProduct = async (id: string) => {
     if (!window.confirm("Remove this product from your active stock list?")) return;
     const { error: updateError } = await neon.from("products").update({ is_active: false }).eq("id", id).eq("business_id", businessId);
     if (updateError) setError(updateError.message);
@@ -123,7 +134,7 @@ export default function Stock() {
       {loading ? <p className="py-10 text-center text-sm text-slate-500">Loading inventory…</p> : visible.length === 0 ? <div className="rounded-2xl bg-white p-8 text-center"><Archive className="mx-auto mb-2 text-slate-300" size={30} /><p className="font-medium text-midnight">No products found</p><p className="mt-1 text-sm text-slate-500">Add your first product to start tracking stock.</p></div> : <section className="space-y-3">{visible.map((p) => {
         const low = Number(p.stock_quantity) <= Number(p.low_stock_threshold);
         return <article key={p.id} className="rounded-2xl bg-white p-4 shadow-sm">
-          <div className="flex items-start justify-between gap-3"><div className="min-w-0"><h2 className="font-semibold text-midnight">{p.name}</h2><p className="text-xs text-slate-500">{p.sku || "No SKU"} · {money(p.selling_price)}</p></div><div className="flex items-center gap-1"><button aria-label={`Edit ${p.name}`} onClick={() => editProduct(p)} className="rounded-lg p-2 text-emerald hover:bg-emerald/10"><Pencil size={17} /></button><button aria-label={`Archive ${p.name}`} onClick={() => void archiveProduct(p.id)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100"><Archive size={17} /></button></div></div>
+          <div className="flex items-start justify-between gap-3"><div className="min-w-0"><h2 className="font-semibold text-midnight">{p.name}</h2><p className="text-xs text-slate-500">{p.sku || "No SKU"} · {money(p.selling_price)}</p></div><div className="flex items-center gap-1"><button aria-label={`Edit ${p.name}`} onClick={() => editProduct(p)} className="rounded-lg p-2 text-emerald hover:bg-emerald/10"><Pencil size={17} /></button><div className="flex items-center gap-1"><button aria-label={`Edit ${p.name}`} onClick={() => editProduct(p)} className="rounded-lg p-2 text-emerald hover:bg-emerald/10"><Pencil size={17} /></button><button aria-label={`Archive ${p.name}`} onClick={() => void archiveProduct(p.id)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100"><Archive size={17} /></button></div></div></div>
           <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3"><div><p className="text-xs text-slate-500">Available stock</p><p className="text-lg font-bold text-midnight">{Number(p.stock_quantity).toLocaleString("en-KE")} <span className="text-xs font-normal text-slate-500">{p.unit}</span></p></div>{low && <span className="flex items-center gap-1 rounded-full bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700"><AlertTriangle size={13} /> Low stock</span>}</div>
         </article>;
       })}</section>}
