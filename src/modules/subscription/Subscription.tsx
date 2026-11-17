@@ -19,6 +19,8 @@ type SubscriptionRecord = {
   plan_id: PlanId;
   status: "active" | "pending" | "past_due" | "cancelled" | "expired";
   current_period_end: string | null;
+  auto_renew: boolean;
+  cancel_at_period_end: boolean;
 };
 
 const money = (value: number) => `KSh ${value.toLocaleString("en-KE")}`;
@@ -40,7 +42,8 @@ export default function Subscription() {
   const [subscription, setSubscription] = useState<SubscriptionRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");\n  const [billingBusy, setBillingBusy] = useState(false);
+  const [notice, setNotice] = useState("");
+  const [billingBusy, setBillingBusy] = useState(false);
 
   useEffect(() => {
     if (!businessId) return;
@@ -97,7 +100,24 @@ export default function Subscription() {
     return () => { active = false; };
   }, [businessId]);
 
-  const setAutoRenew = async (enabled: boolean) => {\n    if (!businessId) return; setBillingBusy(true); setError(""); setNotice("");\n    const { error: updateError } = await neon.rpc("set_subscription_auto_renew", { p_business_id: businessId, p_enabled: enabled });\n    if (updateError) setError(updateError.message);\n    else { setSubscription(current => current ? { ...current, auto_renew: enabled } : current); setNotice(enabled ? "Automatic billing preference saved. Automatic charges will begin only when recurring M-Pesa billing is available." : "Automatic billing preference turned off."); }\n    setBillingBusy(false);\n  };\n\n  const cancelSubscription = async () => {\n    if (!businessId || !window.confirm("Cancel this paid subscription at the end of its current billing period? Your paid features remain available until then.")) return;\n    setBillingBusy(true); setError(""); setNotice("");\n    const { data, error: cancelError } = await neon.rpc("cancel_business_subscription", { p_business_id: businessId });\n    if (cancelError) setError(cancelError.message);\n    else { setSubscription(current => current ? { ...current, auto_renew: false, cancel_at_period_end: true } : current); setNotice(data ? `Cancellation scheduled. Your plan remains active until ${new Date(data).toLocaleDateString("en-KE")}.` : "Cancellation scheduled for the end of your billing period."); }\n    setBillingBusy(false);\n  };\n\n  const currentPlan = useMemo(
+  const setAutoRenew = async (enabled: boolean) => {
+    if (!businessId) return; setBillingBusy(true); setError(""); setNotice("");
+    const { error: updateError } = await neon.rpc("set_subscription_auto_renew", { p_business_id: businessId, p_enabled: enabled });
+    if (updateError) setError(updateError.message);
+    else { setSubscription(current => current ? { ...current, auto_renew: enabled } : current); setNotice(enabled ? "Automatic billing preference saved. Automatic charges will begin only when recurring M-Pesa billing is available." : "Automatic billing preference turned off."); }
+    setBillingBusy(false);
+  };
+
+  const cancelSubscription = async () => {
+    if (!businessId || !window.confirm("Cancel this paid subscription at the end of its current billing period? Your paid features remain available until then.")) return;
+    setBillingBusy(true); setError(""); setNotice("");
+    const { data, error: cancelError } = await neon.rpc("cancel_business_subscription", { p_business_id: businessId });
+    if (cancelError) setError(cancelError.message);
+    else { setSubscription(current => current ? { ...current, auto_renew: false, cancel_at_period_end: true } : current); setNotice(data ? `Cancellation scheduled. Your plan remains active until ${new Date(data).toLocaleDateString("en-KE")}.` : "Cancellation scheduled for the end of your billing period."); }
+    setBillingBusy(false);
+  };
+
+  const currentPlan = useMemo(
     () => plans.find((plan) => plan.id === subscription?.plan_id) ?? plans[0],
     [plans, subscription?.plan_id],
   );
@@ -126,7 +146,15 @@ export default function Subscription() {
         </section>
       )}
 
-      {subscription && currentPlan && (\n        <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">\n          <div><h2 className="font-bold text-midnight">Billing preferences</h2><p className="mt-1 text-sm text-slate-500">Choose whether to renew your subscription automatically and manage cancellation.</p></div>\n          <label className="flex items-start gap-3 rounded-xl bg-cloud p-4"><input type="checkbox" className="mt-1 size-4 accent-emerald" checked={Boolean(subscription.auto_renew)} disabled={billingBusy || subscription.cancel_at_period_end || subscription.plan_id === "free"} onChange={e=>void setAutoRenew(e.target.checked)}/><span><span className="block text-sm font-semibold text-midnight">Enable automatic billing</span><span className="mt-1 block text-xs leading-5 text-slate-500">Save your preference to renew automatically when recurring M-Pesa billing is enabled. No automatic payment is taken until that integration is available.</span></span></label>\n          {subscription.cancel_at_period_end ? <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800">Cancellation is scheduled. Your current plan remains available until the end of this billing period.</p> : subscription.plan_id !== "free" && <button type="button" disabled={billingBusy} onClick={()=>void cancelSubscription()} className="rounded-xl border border-red-200 px-4 py-3 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50">{billingBusy ? "Updating…" : "Cancel subscription"}</button>}\n        </section>\n      )}\n\n      {loading ? (
+      {subscription && currentPlan && (
+        <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div><h2 className="font-bold text-midnight">Billing preferences</h2><p className="mt-1 text-sm text-slate-500">Choose whether to renew your subscription automatically and manage cancellation.</p></div>
+          <label className="flex items-start gap-3 rounded-xl bg-cloud p-4"><input type="checkbox" className="mt-1 size-4 accent-emerald" checked={Boolean(subscription.auto_renew)} disabled={billingBusy || subscription.cancel_at_period_end || subscription.plan_id === "free"} onChange={e=>void setAutoRenew(e.target.checked)}/><span><span className="block text-sm font-semibold text-midnight">Enable automatic billing</span><span className="mt-1 block text-xs leading-5 text-slate-500">Save your preference to renew automatically when recurring M-Pesa billing is enabled. No automatic payment is taken until that integration is available.</span></span></label>
+          {subscription.cancel_at_period_end ? <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800">Cancellation is scheduled. Your current plan remains available until the end of this billing period.</p> : subscription.plan_id !== "free" && <button type="button" disabled={billingBusy} onClick={()=>void cancelSubscription()} className="rounded-xl border border-red-200 px-4 py-3 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50">{billingBusy ? "Updating…" : "Cancel subscription"}</button>}
+        </section>
+      )}
+
+      {loading ? (
         <div className="rounded-2xl bg-white p-8 text-center text-sm text-slate-500">Loading your plans…</div>
       ) : (
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
