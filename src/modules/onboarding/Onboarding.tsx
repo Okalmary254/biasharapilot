@@ -1,23 +1,23 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { neon } from "../../services/neon/client";
 import { useAuth } from "../../app/providers/useAuth";
 
 const field = "w-full rounded-xl border border-gray-300 bg-white px-4 py-3";
 const types = ["Retail shop", "Wholesale", "Salon / Barber", "Food & Beverage", "Services", "Other"];
 
-function BackHomeButton() {
-  const nav = useNavigate();
+function BackHomeButton({ hasBusiness }: { hasBusiness: boolean }) {
   return (
-    <div className="fixed inset-x-0 bottom-0 z-50 flex justify-center border-t border-gray-200 bg-white/95 px-6 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] backdrop-blur">
-      <button
-        type="button"
-        onClick={() => nav("/", { replace: true })}
-        className="w-full max-w-sm rounded-xl bg-emerald px-6 py-4 text-base font-bold text-white shadow-lg shadow-emerald/20 transition hover:bg-emerald/90 focus:outline-none focus:ring-4 focus:ring-emerald/20"
+    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[60] flex justify-center border-t border-gray-200 bg-white/95 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur">
+      <Link
+        to={hasBusiness ? "/" : "/auth"}
+        replace
+        aria-label={hasBusiness ? "Go to home dashboard" : "Return to sign in"}
+        className="pointer-events-auto flex min-h-12 w-full max-w-sm touch-manipulation items-center justify-center rounded-xl bg-emerald px-6 py-3 text-base font-bold text-white shadow-lg shadow-emerald/20 transition hover:bg-emerald/90 active:scale-[0.99] focus:outline-none focus:ring-4 focus:ring-emerald/20"
       >
-        Back to home
-      </button>
+        {hasBusiness ? "Back to home" : "Back to sign in"}
+      </Link>
     </div>
   );
 }
@@ -65,7 +65,7 @@ export default function Onboarding() {
       <div className="grid size-16 place-items-center rounded-2xl bg-emerald/10 text-emerald text-2xl font-bold">✓</div>
       <h2 className="text-2xl font-bold text-midnight">Your business is ready</h2>
       <p className="max-w-sm text-sm text-slate-500">Your workspace has been set up. Continue to your dashboard to start managing sales, stock and customers.</p>
-      <BackHomeButton />
+      <BackHomeButton hasBusiness />
     </main>
   );
 
@@ -87,7 +87,7 @@ export default function Onboarding() {
           {busy ? "Creating..." : "Continue"}
         </button>
       </form>
-      <BackHomeButton />
+      <BackHomeButton hasBusiness={Boolean(businessId)} />
     </main>
   );
 }
