@@ -85,7 +85,7 @@ export default function Subscription() {
           if (retry.data) setSubscription(retry.data as SubscriptionRecord);
           else setError(insertError.message);
         } else {
-          setSubscription({ plan_id: "free", status: "active", current_period_end: null });
+          setSubscription({ plan_id: "free", status: "active", current_period_end: null, auto_renew: false, cancel_at_period_end: false });
         }
       }
       setLoading(false);
