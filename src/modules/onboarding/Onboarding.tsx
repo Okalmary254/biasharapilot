@@ -44,6 +44,14 @@ export default function Onboarding() {
     }
   };
 
+  <button
+        type="button"
+        onClick={() => nav("/", { replace: true })}
+        className="w-full max-w-sm rounded-xl bg-emerald px-6 py-4 text-base font-bold text-white shadow-lg shadow-emerald/20 transition hover:bg-emerald/90 focus:outline-none focus:ring-4 focus:ring-emerald/20"
+      >
+        Back to home
+      </button>
+
   // Returning users (including after closing/reopening the APK) go straight
   // to the dashboard instead of seeing the onboarding completion screen.
   if (businessId && !justCompleted) return <Navigate to="/" replace />;
