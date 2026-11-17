@@ -133,6 +133,28 @@ export default function AuthPage() {
     }
   };
 
+  const startVerification = async () => {
+    if (!form.email.trim()) {
+      setError("Enter your email address first, then request a verification code.");
+      return;
+    }
+    setResendBusy(true); setError(""); setNotice("");
+    try {
+      const { error: sendError } = await emailOtpClient.emailOtp.sendVerificationOtp({
+        email: form.email.trim(),
+        type: "email-verification",
+      });
+      if (sendError) throw sendError;
+      setVerificationStep(true);
+      setVerificationCode("");
+      setNotice("A verification code has been sent. Enter it below to continue.");
+    } catch (sendError) {
+      setError(errorMessage(sendError));
+    } finally {
+      setResendBusy(false);
+    }
+  };
+
   const switchMode = (nextMode: "login" | "register") => {
     setMode(nextMode); setVerificationStep(false); setVerificationCode(""); setError(""); setNotice("");
   };
@@ -182,6 +204,7 @@ export default function AuthPage() {
           {error && <p role="alert" className="rounded-xl bg-red-50 px-3 py-2.5 text-sm text-red-700">{error}</p>}{notice && <p role="status" className="rounded-xl bg-emerald/10 px-3 py-2.5 text-sm text-emerald">{notice}</p>}
           <button disabled={busy} className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald py-3.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald/90 disabled:opacity-60">{busy?"Please wait…":mode==="login"?"Sign in":"Create account"}{!busy&&<ArrowRight size={17}/>}</button>
         </form>}
+        {!verificationStep && mode === "login" && <button type="button" onClick={() => void startVerification()} disabled={resendBusy || busy || !form.email.trim()} className="mt-4 w-full rounded-xl border border-emerald/20 bg-emerald/5 py-3 text-sm font-semibold text-emerald hover:bg-emerald/10 disabled:opacity-50">{resendBusy ? "Sending verification code…" : "Need to verify your email? Enter a code"}</button>}
         {!verificationStep && <p className="mt-7 text-center text-sm text-slate-500">{mode==="login"?"New to BiasharaPilot?":"Already have an account?"} <button type="button" onClick={()=>switchMode(mode==="login"?"register":"login")} className="font-semibold text-emerald hover:underline">{mode==="login"?"Create an account":"Sign in instead"}</button></p>}
         <p className="mt-10 text-center text-xs leading-5 text-slate-400">Keep your password private. BiasharaPilot will never ask you to share it.</p>
       </div>
