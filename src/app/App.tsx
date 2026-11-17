@@ -5,6 +5,7 @@ import AuthPage from "../modules/auth/AuthPage";
 import Onboarding from "../modules/onboarding/Onboarding";
 import Dashboard from "../modules/dashboard/Dashboard";
 import Profile from "../modules/profile/Profile";
+import Subscription from "../modules/subscription/Subscription";
 import Stock from "../modules/stock/Stock";
 import Sales from "../modules/sales/Sales";
 import Customers from "../modules/customers/Customers";
@@ -43,6 +44,7 @@ export default function App() {
         <Route path="/expenses" element={<Expenses/>}/>
         <Route path="/ai" element={<AIAssistant/>}/>
         <Route path="/profile" element={<Profile/>}/>
+        <Route path="/subscription" element={<Subscription/>}/>
       </Route>
     </Route>
     <Route path="*" element={<Navigate to="/" replace/>}/>
