@@ -1,12 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { FormEvent, KeyboardEvent } from "react";
-import { Bot, Send, Sparkles, TrendingUp, Package, Wallet, Users, RefreshCw } from "lucide-react";
-import { neon } from "../../services/neon/client";
+import { Bot, Send, Sparkles, TrendingUp, Package, Wallet, Users } from "lucide-react";
 import { useAuth } from "../../app/providers/useAuth";
 
 type Message = { role: "user" | "assistant"; content: string };
 type AIUsage = { plan_name: string; used: number; limit: number; remaining: number; period_start: string };
-type Context = { salesTotal: number; salesCount: number; expensesTotal: number; customerCount: number; lowStock: { name: string; quantity: number; threshold: number }[] };
 const endpoint = (import.meta.env.VITE_AI_API_URL as string | undefined)?.trim() || "/api/ai";
 const suggestions = [
   { icon: TrendingUp, label: "Review my performance", prompt: "Review my recent business performance. What is going well and what should I improve?" },
@@ -18,38 +16,11 @@ const suggestions = [
 export default function AIAssistant() {
   const { businessId } = useAuth();
   const [messages,setMessages]=useState<Message[]>([{role:"assistant",content:"Hello! I'm your BiasharaPilot business assistant. I can help you understand your numbers, manage stock and find practical ways to grow. What would you like to work on?"}]);
-  const [context,setContext]=useState<Context|null>(null);
   const [usage,setUsage]=useState<AIUsage|null>(null);
-  const [loading,setLoading]=useState(true); const [sending,setSending]=useState(false);
+  const [sending,setSending]=useState(false);
   const [input,setInput]=useState(""); const [error,setError]=useState("");
   const bottom=useRef<HTMLDivElement>(null);
 
-  const loadContext=useCallback(async()=>{
-    if(!businessId)return;
-    setLoading(true);setError("");
-    const since=new Date();since.setDate(since.getDate()-30);
-    const [s,e,c,p]=await Promise.all([
-      neon.from("sales").select("total,status").eq("business_id",businessId).gte("sold_at",since.toISOString()).neq("status","cancelled"),
-      neon.from("expenses").select("amount").eq("business_id",businessId).gte("expense_date",since.toISOString().slice(0,10)),
-      neon.from("customers").select("id",{count:"exact",head:true}).eq("business_id",businessId),
-      neon.from("products").select("name,stock_quantity,low_stock_threshold").eq("business_id",businessId).eq("is_active",true)
-    ]);
-    const err=s.error||e.error||c.error||p.error;
-    if(err)setError(err.message);
-    else {
-      const products=p.data??[];
-      setContext({
-        salesTotal:(s.data??[]).filter(x=>x.status==="completed").reduce((n,x)=>n+Number(x.total),0),
-        salesCount:(s.data??[]).length,
-        expensesTotal:(e.data??[]).reduce((n,x)=>n+Number(x.amount),0),
-        customerCount:c.count??0,
-        lowStock:products.filter(x=>Number(x.stock_quantity)<=Number(x.low_stock_threshold)).map(x=>({name:x.name,quantity:Number(x.stock_quantity),threshold:Number(x.low_stock_threshold)})).slice(0,15)
-      });
-    }
-    setLoading(false);
-  },[businessId]);
-
-  useEffect(()=>{void loadContext();},[loadContext]);
   useEffect(()=>{bottom.current?.scrollIntoView({behavior:"smooth",block:"end"});},[messages,sending]);
 
   const send=async(event?:FormEvent,preset?:string)=>{
@@ -89,7 +60,7 @@ export default function AIAssistant() {
   return <main className="mx-auto flex min-h-[calc(100dvh-6rem)] max-w-3xl flex-col gap-4 p-4 sm:p-6">
     <header className="flex items-center justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-wider text-emerald">Your business copilot</p><h1 className="text-2xl font-bold text-midnight">AI Assistant</h1><p className="mt-1 text-sm text-slate-500">Practical guidance grounded in your business records.</p>{usage&&<p className="mt-2 text-xs font-medium text-slate-500">{usage.plan_name} plan · {usage.used} of {usage.limit} AI messages used this month · {usage.remaining} remaining</p>}</div><div className="grid size-12 shrink-0 place-items-center rounded-2xl bg-midnight text-gold"><Sparkles size={23}/></div></header>
     <section className="flex min-h-64 flex-1 flex-col overflow-hidden">
-      <div className="flex items-center gap-2 border-b border-slate-100 px-4 py-3"><div className="grid size-8 place-items-center rounded-lg bg-emerald/10 text-emerald"><Bot size={18}/></div><div><p className="text-sm font-semibold text-midnight">BiasharaPilot AI</p><p className="text-[11px] text-slate-500">{loading?"Preparing business context…":"Business context · last 30 days"}</p></div><button type="button" onClick={()=>void loadContext()} aria-label="Refresh business data" className="ml-auto rounded-lg p-2 text-slate-400 hover:bg-slate-100"><RefreshCw size={16}/></button></div>
+      <div className="flex items-center gap-2 border-b border-slate-100 px-4 py-3"><div className="grid size-8 place-items-center rounded-lg bg-emerald/10 text-emerald"><Bot size={18}/></div><div><p className="text-sm font-semibold text-midnight">BiasharaPilot AI</p><p className="text-[11px] text-slate-500">Ready to help with your business</p></div></div>
       <div className="flex-1 space-y-3 overflow-y-auto p-4">{messages.map((m,i)=><div key={i} className={`flex ${m.role==="user"?"justify-end":"justify-start"}`}><div className={`max-w-[88%] whitespace-pre-wrap rounded-2xl px-4 py-3 text-sm leading-6 ${m.role==="user"?"rounded-br-md bg-midnight text-white":"rounded-bl-md bg-cloud text-slate-700"}`}>{m.content}</div></div>)}{sending&&<div className="w-fit rounded-2xl bg-cloud px-4 py-3 text-sm text-slate-500">Thinking…</div>}<div ref={bottom}/></div>
       {messages.length===1&&<div className="grid grid-cols-1 gap-2 border-t border-slate-100 p-3 sm:grid-cols-2">{suggestions.map(({icon:Icon,label,prompt})=><button key={label} type="button" onClick={()=>void send(undefined,prompt)} className="flex items-center gap-2 rounded-xl border border-slate-200 p-3 text-left text-xs font-medium text-slate-600 hover:border-emerald hover:bg-emerald/5"><Icon size={16} className="shrink-0 text-emerald"/>{label}</button>)}</div>}
       {error&&<div role="alert" className="mx-3 mb-2 rounded-xl bg-red-50 p-3 text-xs text-red-700">{error}{error.includes("Upgrade your plan")&&<button type="button" onClick={()=>window.location.assign("/subscription")} className="ml-2 font-bold underline">View plans</button>}</div>}
