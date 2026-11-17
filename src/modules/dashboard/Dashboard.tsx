@@ -42,7 +42,7 @@ export default function Dashboard() {
       setCustomers(c.count ?? 0);
       setLowStock((p.data ?? []).filter(row => Number(row.stock_quantity) <= Number(row.low_stock_threshold)).length);
       const fullName = profile.data?.full_name?.trim() ?? "";
-      setFirstName(fullName ? fullName.split(/\\s+/)[0] : "there");
+      setFirstName(fullName ? fullName.split(/\s+/)[0] : "there");
       setBusiness(businessResult.data as BusinessSummary|null);
       setLoading(false);
     }).catch(() => { if (active) setLoading(false); });
